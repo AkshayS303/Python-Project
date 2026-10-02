@@ -1,0 +1,65 @@
+# MatSolve – Project Improvements Summary
+# Auto-maintained by Antigravity AI assistant. Updated on every change.
+
+================================================================================
+UPDATE LOG
+================================================================================
+
+[2026-10-02] – Secure API Key via Environment Variable
+-------------------------------------------------------
+CHANGE: Moved the hardcoded Gemini API key out of source code and into the
+        `.env` environment variable file using python-dotenv.
+
+FILES MODIFIED:
+  - ai_parser.py
+      • Added `from dotenv import load_dotenv` import.
+      • Added `load_dotenv()` call at module startup so the .env file is
+        read before os.environ is accessed.
+      • Changed DEFAULT_API_KEY fallback from a hardcoded string to an
+        empty string — key MUST now come from GEMINI_API_KEY in .env.
+
+  - requirements.txt
+      • Added `python-dotenv>=1.0.0` dependency.
+
+  - .gitignore
+      • Added `.env`, `.env.*` (with `!.env.example` exception) to prevent
+        the API key from being accidentally pushed to version control.
+
+HOW IT WORKS:
+  1. Developer creates / edits `.env` in the project root:
+         GEMINI_API_KEY=<your-key-here>
+  2. `load_dotenv()` at the top of ai_parser.py reads this file into the
+     process environment before any other code runs.
+  3. `os.environ.get("GEMINI_API_KEY", "")` picks up the value.
+  4. The `.env` file is git-ignored, so the real key is never committed.
+
+SECURITY IMPACT: High – eliminates credentials in source control.
+
+================================================================================
+FEATURE OVERVIEW (current state)
+================================================================================
+
+Core Engine:
+  - Cascading multi-model Gemini API calls (6 models, auto-fallback)
+  - Deterministic offline equation parser (zero network, regex-based)
+  - In-memory LRU-style cache (0 ms repeat responses)
+  - Pre-seeded classroom demo presets (100% uptime guarantee)
+  - Exponential backoff on 503 / 429 errors
+  - Direct REST HTTP fallback when SDK is unavailable
+
+AI Integration:
+  - google-genai SDK with structured JSON schema (Pydantic)
+  - HTTP urllib fallback for environments without the SDK
+
+Security:
+  - API key stored in .env (git-ignored)
+  - python-dotenv loads key at startup automatically
+  - No credentials in committed source code
+
+Dependencies (requirements.txt):
+  - fastapi >= 0.110.0
+  - uvicorn >= 0.28.0
+  - numpy >= 1.26.0
+  - pydantic >= 2.6.0
+  - google-genai >= 0.1.0
+  - python-dotenv >= 1.0.0

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MatSolve — Universal Linear Equation & Word Problem Solver</title>
+  <meta name="description" content="State-of-the-art interactive Linear Equation and Word Problem solver powered by Gemini AI and deterministic Linear Algebra." />
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  
+  <!-- Chart.js for Visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+  <div class="bg-glow glow-3"></div>
+
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-shapes"></i>
+        </div>
+        <div class="brand-text">
+          <h1>Mat<span class="gradient-text">Solve</span></h1>
+          <p class="tagline">Universal Real-World Word Problem & Linear System Solver</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-api-key" class="btn-secondary" title="Configure Gemini API Key">
+          <i class="fa-solid fa-key"></i>
+          <span>API Key</span>
+        </button>
+        <a href="#how-it-works" class="btn-ghost" id="btn-info">
+          <i class="fa-regular fa-circle-question"></i>
+          <span>Guide</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Mode Switcher Tabs -->
+    <section class="mode-selector-section">
+      <div class="segmented-control" role="tablist">
+        <button class="segment-btn active" id="tab-word-problem" role="tab" aria-selected="true">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>AI Word Problem Solver</span>
+          <span class="badge-ai">Gemini AI</span>
+        </button>
+        <button class="segment-btn" id="tab-direct-matrix" role="tab" aria-selected="false">
+          <i class="fa-solid fa-table-cells"></i>
+          <span>Direct Matrix & Equations</span>
+          <span class="badge-math">Deterministic</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Main Workspace Layout -->
+    <div class="workspace-grid">
+      <!-- Input Panel -->
+      <section class="card input-card glass-panel">
+        <!-- MODE 1: AI Word Problem Input -->
+        <div id="panel-word-problem" class="mode-panel active">
+          <div class="panel-header">
+            <div>
+              <h2>Describe Your Real-World Problem</h2>
+              <p class="panel-desc">Paste any story, business constraint, or word problem. Gemini AI extracts variables, formulates equations, and constructs the linear system.</p>
+            </div>
+          </div>
+
+          <div class="preset-chips">
+            <span class="chips-label"><i class="fa-solid fa-bolt"></i> Try Samples:</span>
+            <button class="chip" data-preset="animals">🐓 Farm Animals</button>
+            <button class="chip" data-preset="portfolio">📈 Investment Return</button>
+            <button class="chip" data-preset="bakery">🥐 Bakery Production</button>
+            <button class="chip" data-preset="mixture">🧪 Chemistry Mixture</button>
+          </div>
+
+          <div class="form-group">
+            <textarea 
+              id="word-problem-input" 
+              class="custom-textarea" 
+              rows="5" 
+              placeholder="e.g. A store sells regular coffees for $3 and deluxe lattes for $5. On Monday, they sold 70 drinks in total and made $290. How many of each drink did they sell?"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- MODE 2: Direct Matrix Input -->
+        <div id="panel-direct-matrix" class="mode-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Direct Matrix Configuration</h2>
+              <p class="panel-desc">Set system dimensions and enter coefficients directly into augmented matrix $[A \mid B]$.</p>
+            </div>
+            <div class="dimension-picker">
+              <label for="matrix-size-select">Variables ($n$):</label>
+              <select id="matrix-size-select" class="custom-select">
+                <option value="2">2 × 2 System</option>
+                <option value="3" selected>3 × 3 System</option>
+                <option value="4">4 × 4 System</option>
+                <option value="5">5 × 5 System</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="preset-chips">
+            <span class="chips-label"><i class="fa-solid fa-bolt"></i> Matrix Presets:</span>
+            <button class="chip" data-matrix-preset="unique3">Unique 3x3</button>
+            <button class="chip" data-matrix-preset="inconsistent">Inconsistent (No Sol)</button>
+            <button class="chip" data-matrix-preset="infinite">Infinite Solutions</button>
+            <button class="chip" data-matrix-preset="identity">Identity 3x3</button>
+          </div>
+
+          <!-- Dynamic Matrix Grid Container -->
+          <div class="matrix-input-wrapper">
+            <div class="matrix-bracket-left"></div>
+            <div id="matrix-grid-container" class="matrix-grid">
+              <!-- Dynamically generated inputs -->
+            </div>
+            <div class="matrix-bracket-right"></div>
+          </div>
+
+          <!-- Live Equation Preview -->
+          <div class="equation-preview-box">
+            <div class="preview-title"><i class="fa-solid fa-code"></i> Live Formulated Equations:</div>
+            <div id="live-equations" class="live-equations-list">
+              <!-- Generated preview -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Method Selection & Solve Action -->
+        <div class="solver-controls">
+          <div class="method-selector-group">
+            <label for="solver-method-select"><i class="fa-solid fa-gears"></i> Solution Method:</label>
+            <select id="solver-method-select" class="custom-select primary-select">
+              <option value="gaussian">Gaussian Elimination (REF + Back-Substitution)</option>
+              <option value="gauss_jordan">Gauss-Jordan Elimination (RREF)</option>
+              <option value="cramer">Cramer's Rule (Determinants)</option>
+              <option value="inversion">Matrix Inversion (X = A⁻¹B)</option>
+            </select>
+          </div>
+
+          <button id="btn-solve" class="btn-primary solve-btn">
+            <i class="fa-solid fa-calculator"></i>
+            <span>Calculate Solution</span>
+            <div class="btn-spinner hidden" id="solve-spinner"></div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Output / Results Panel -->
+      <section class="card output-card glass-panel" id="results-section">
+        <!-- Initial Blank State -->
+        <div class="empty-state" id="empty-state-view">
+          <div class="empty-icon">
+            <i class="fa-solid fa-calculator-simple"></i>
+          </div>
+          <h3>Ready to Solve</h3>
+          <p>Select a method and click <strong>Calculate Solution</strong> to view matrix operations, rank analysis, and variable allocations.</p>
+        </div>
+
+        <!-- Populated Results View (hidden by default) -->
+        <div class="results-content hidden" id="results-content-view">
+          <!-- Status Banner & Solvability Metrics -->
+          <div class="status-banner" id="status-banner">
+            <div class="status-header">
+              <div class="status-badge" id="status-badge">
+                <i class="fa-solid fa-circle-check"></i>
+                <span id="status-title">Unique Solution Found</span>
+              </div>
+              <div class="system-ranks">
+                <span class="rank-pill" id="pill-rank-a">rank(A) = 3</span>
+                <span class="rank-pill" id="pill-rank-aug">rank([A|B]) = 3</span>
+                <span class="rank-pill" id="pill-num-vars">Variables = 3</span>
+              </div>
+            </div>
+            <p class="status-explanation" id="status-explanation"></p>
+          </div>
+
+          <!-- AI Breakdown (Visible when solving word problems) -->
+          <div class="ai-breakdown-card hidden" id="ai-breakdown-container">
+            <div class="card-subtitle" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-brain"></i>
+                <span>AI Semantic Formulation Breakdown</span>
+              </div>
+              <span id="ai-source-badge" class="badge-math" style="font-size: 0.72rem; text-transform: none; display: flex; align-items: center; gap: 5px;">⚡ High Availability</span>
+            </div>
+            <div class="variables-tags" id="ai-variable-tags"></div>
+            <ul class="equations-explanation-list" id="ai-explanation-list"></ul>
+          </div>
+
+          <!-- Solved Values Cards -->
+          <div class="solutions-overview">
+            <div class="section-headline">
+              <h3><i class="fa-solid fa-square-root-variable"></i> Resolved Values</h3>
+              <button class="btn-tiny" id="btn-copy-solutions" title="Copy Values">
+                <i class="fa-regular fa-copy"></i> Copy
+              </button>
+            </div>
+            <div class="variables-grid" id="solved-variables-grid">
+              <!-- Rendered variable cards -->
+            </div>
+          </div>
+
+          <!-- Visual Bar Chart Distribution -->
+          <div class="chart-container-card">
+            <div class="section-headline">
+              <h3><i class="fa-solid fa-chart-column"></i> Variable Allocation Profile</h3>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="solutionChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Step-by-Step Row Operations Accordion -->
+          <div class="steps-section">
+            <div class="section-headline">
+              <h3><i class="fa-solid fa-list-check"></i> Step-by-Step Matrix Operations</h3>
+              <span class="step-count-badge" id="step-count">0 Steps</span>
+            </div>
+            <div class="steps-timeline" id="steps-timeline">
+              <!-- Rendered step cards -->
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- API Key Modal -->
+  <div class="modal-overlay hidden" id="api-key-modal">
+    <div class="modal-card glass-panel">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-key"></i>
+          <h3>Gemini API Configuration</h3>
+        </div>
+        <button class="btn-close" id="btn-close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>A default key is pre-configured on the backend, or you can provide your own Gemini API Key for parsing word problems:</p>
+        <div class="form-group">
+          <input type="password" id="custom-api-key-input" class="custom-input" placeholder="AIzaSy..." />
+        </div>
+        <div class="api-key-actions">
+          <button class="btn-primary" id="btn-save-api-key">Save Key</button>
+          <button class="btn-secondary" id="btn-clear-api-key">Reset to Default</button>
+        </div>
+        <p class="modal-footer-note"><i class="fa-solid fa-shield-halved"></i> Your key is saved locally in your browser storage.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div class="toast hidden" id="app-toast"></div>
+
+  <!-- Scripts -->
+  <script src="/static/app.js"></script>
+</body>
+</html>
