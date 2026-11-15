@@ -119,6 +119,7 @@
           <div class="preset-chips">
             <span class="chips-label"><i class="fa-solid fa-bolt"></i> Matrix Presets:</span>
             <button class="chip" data-matrix-preset="unique3">Unique 3x3</button>
+            <button class="chip" data-matrix-preset="jacobi_dominant">Jacobi Diagonally Dominant</button>
             <button class="chip" data-matrix-preset="inconsistent">Inconsistent (No Sol)</button>
             <button class="chip" data-matrix-preset="infinite">Infinite Solutions</button>
             <button class="chip" data-matrix-preset="identity">Identity 3x3</button>
@@ -151,7 +152,13 @@
               <option value="gauss_jordan">Gauss-Jordan Elimination (RREF)</option>
               <option value="cramer">Cramer's Rule (Determinants)</option>
               <option value="inversion">Matrix Inversion (X = A⁻¹B)</option>
+              <option value="jacobi">Jacobi Iteration (Numerical Analysis & Trajectory)</option>
             </select>
+          </div>
+
+          <div id="jacobi-options-group" class="jacobi-options-group hidden">
+            <label for="jacobi-iter-input"><i class="fa-solid fa-arrows-rotate"></i> Max Iterations:</label>
+            <input type="number" id="jacobi-iter-input" class="custom-input iter-input" value="15" min="2" max="100" />
           </div>
 
           <button id="btn-solve" class="btn-primary solve-btn">
@@ -218,12 +225,79 @@
           </div>
 
           <!-- Visual Bar Chart Distribution -->
-          <div class="chart-container-card">
+          <div class="chart-container-card" id="allocation-chart-card">
             <div class="section-headline">
               <h3><i class="fa-solid fa-chart-column"></i> Variable Allocation Profile</h3>
             </div>
             <div class="chart-wrapper">
               <canvas id="solutionChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Jacobi Iterative Numerical Analytics Section -->
+          <div class="jacobi-analytics-section hidden" id="jacobi-analytics-section">
+            <div class="section-headline">
+              <h3><i class="fa-solid fa-chart-line"></i> Jacobi Numerical Analytics & Convergence</h3>
+              <span class="badge-math" id="jacobi-iterations-badge">15 Iterations</span>
+            </div>
+
+            <!-- Dominance & Convergence Banner -->
+            <div class="dominance-card" id="dominance-card">
+              <div class="dominance-header">
+                <i class="fa-solid fa-circle-check" id="dominance-icon"></i>
+                <span id="dominance-title">Strictly Diagonally Dominant</span>
+              </div>
+              <p id="dominance-text">Each diagonal element magnitude |A_ii| exceeds the sum of off-diagonal elements in its row. Convergence is mathematically guaranteed by the Gershgorin Circle Theorem.</p>
+              <div class="dominance-table-wrapper" id="dominance-table-container"></div>
+            </div>
+
+            <!-- Statistical Dispersion Across Iterations (Variance & Std Dev) -->
+            <div class="stats-overview-card">
+              <div class="card-subtitle">
+                <i class="fa-solid fa-calculator"></i>
+                <span>Statistical Dispersion Across Iterations (Step 7)</span>
+              </div>
+              <div class="stats-grid" id="jacobi-stats-grid">
+                <!-- Dynamically populated stats cards -->
+              </div>
+            </div>
+
+            <!-- Convergence Trajectory Line Chart -->
+            <div class="chart-container-card">
+              <div class="section-headline">
+                <h3><i class="fa-solid fa-bezier-curve"></i> Convergence Trajectory Profile</h3>
+                <span class="badge-ai" style="font-size: 0.72rem;">x, y, z Coordinates vs Iteration</span>
+              </div>
+              <div class="chart-wrapper" style="height: 280px;">
+                <canvas id="jacobiTrajectoryChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Running Variance vs. Std Dev Crossover Profile Chart -->
+            <div class="chart-container-card">
+              <div class="section-headline">
+                <div>
+                  <h3><i class="fa-solid fa-code-compare"></i> Running Variance vs. Std Dev Crossover (Step 9)</h3>
+                  <p class="chart-subtext">Detects dynamic intersection points where running standard deviation σ equals running variance σ².</p>
+                </div>
+              </div>
+              <div class="crossover-badges" id="crossover-badges-list"></div>
+              <div class="chart-wrapper" style="height: 280px;">
+                <canvas id="jacobiCrossoverChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Iteration History Table -->
+            <div class="iteration-history-card">
+              <div class="section-headline">
+                <h3><i class="fa-solid fa-table-list"></i> Coordinate Evolution History</h3>
+              </div>
+              <div class="iteration-table-wrapper">
+                <table class="iteration-table" id="iteration-history-table">
+                  <thead id="iteration-table-head"></thead>
+                  <tbody id="iteration-table-body"></tbody>
+                </table>
+              </div>
             </div>
           </div>
 

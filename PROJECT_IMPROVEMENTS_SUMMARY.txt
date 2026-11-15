@@ -5,6 +5,89 @@
 UPDATE LOG
 ================================================================================
 
+[2026-10-29] – High-Availability Word Problem Resilience & Serialization Fix
+--------------------------------------------------------------------------------
+CHANGE: Resolved "Failed to solve word problem" error and Jacobi divergence guard:
+  1. Fixed FastAPI/Starlette JSON serialization in `matrix_engine.py`:
+     NumPy boolean and float types (`np.bool_`, `np.floating`) were causing
+     `TypeError: Object of type bool_ is not JSON serializable` in `JSONResponse`.
+     All outputs are now explicitly coerced to native Python primitives (`bool`, `float`, `int`).
+  2. Added mathematical error expansion divergence detection to `solve_jacobi_iteration`:
+     Detects when consecutive step errors expand (diff[k] > diff[k-1]) on non-dominant systems.
+     Suppresses erroneous divergent values and provides a 1-click "Switch to Gaussian & Solve"
+     button directly in the banner and solution grid.
+  3. Added server-side error trapping in `solve_word_problem_endpoint` to cleanly
+     return structured JSON errors instead of unhandled 500 crashes.
+  4. Added client-side Word Problem Preset matching in `static/app.js`
+     (`trySolveWordProblemOffline`): If the backend is restarting or offline,
+     the frontend automatically detects preset problems (e.g., Farm Animals chickens/cows)
+     and solves them in-browser with 0ms latency, guaranteeing 100% demo uptime.
+  5. Auto-Reset Method on Mode Switch: When switching to the AI Word Problem Solver
+     tab, the solution method automatically resets from Jacobi back to Gaussian
+     Elimination to ensure word problems solve with exact direct algebra.
+
+[2026-10-29] – Jacobi Iterative Numerical Method & Convergence Analytics Suite
+--------------------------------------------------------------------------------
+CHANGE: Integrated teammate's numerical linear algebra algorithm (from project1.pdf)
+        into the MatSolve engine and web platform. Bridges direct algebraic
+        elimination with iterative numerical methods and statistical analytics.
+
+MATHEMATICAL & ALGORITHMIC ADDITIONS:
+  - Jacobi Iterative Method:
+      • Fixed-point iteration: x_i^(k+1) = (b_i - ∑_{j≠i} A_ij x_j^(k)) / A_ii
+      • Initial state vector x^(0) = [0, 0, ..., 0] with step-by-step coordinate logging.
+      • Non-zero diagonal pre-check and strict diagonal dominance test:
+        |A_ii| > ∑_{j≠i} |A_ij| (guarantees convergence by Gershgorin Circle Theorem).
+      • Integrated determinant test det(A) and Row Echelon Form (REF) rank analysis
+        via Rouché–Capelli theorem.
+  - Statistical Dispersion Across Iterations (Teammate Step 7):
+      • Calculates total variance (σ²) and standard deviation (σ) for each variable
+        across all iteration steps to measure dispersion during convergence.
+  - Running Variance vs. Std Dev Crossover Profile (Teammate Step 9):
+      • Computes cumulative running variance and running standard deviation starting
+        from step 2.
+      • Dynamically locates sign change / zero-crossings where running σ = σ² and logs
+        exact iteration index and value.
+  - 3D Convergence Trajectory:
+      • Records coordinates (x, y, z) across iteration indices k = 0...N.
+
+FILES MODIFIED:
+  - matrix_engine.py
+      • Implemented `solve_jacobi_iteration(A_in, B_in, num_iterations, tol)`.
+      • Returns convergence status, dominance verification, iteration history,
+        statistics, crossover points, and step breakdown.
+      • Guaranteed native Python type serialization (`bool`, `float`, `int`).
+  - server.py
+      • Added `"jacobi"` method support to `MatrixSolveRequest` and `WordProblemRequest`.
+      • Updated `execute_solver` to route to `solve_jacobi_iteration` with customizable
+        iteration depth.
+      • Wrapped solver execution in `solve_word_problem_endpoint` with structured error handling.
+  - static/index.html
+      • Added "Jacobi Iteration (Numerical Analysis & Trajectory)" method option.
+      • Added iteration count input (`#jacobi-iter-input`).
+      • Added "Jacobi Diagonally Dominant" preset button.
+      • Added `#jacobi-analytics-section` containing:
+          - Diagonal dominance condition card with row-by-row pivot inspection table.
+          - Statistical dispersion cards (Variance & Std Dev per variable).
+          - Interactive convergence trajectory line chart (Chart.js).
+          - Running Variance vs. Std Dev Crossover line chart with crossover badges.
+          - Coordinate evolution history data table.
+  - static/style.css
+      • Added styles for Jacobi controls, dominance banner (green/amber status),
+        stat cards, crossover badges, and monospace iteration tables.
+  - static/app.js
+      • Added `jacobi_dominant` preset (10x - y + 2z = 6, etc.) resolving to [1, 2, -1].
+      • Added dynamic UI toggling for iteration count when Jacobi is selected.
+      • Added `renderJacobiAnalytics`, `renderJacobiTrajectoryChart`,
+        `renderJacobiCrossoverChart`, and `renderIterationHistoryTable`.
+      • Added `runClientSideJacobi` offline fallback for guaranteed 100% demo uptime.
+      • Added `trySolveWordProblemOffline` to ensure word problems solve seamlessly
+        even if backend is unreachable or restarted.
+
+ACADEMIC / PRESENTATION IMPACT:
+  - Elevates project from a standard direct matrix calculator into an advanced
+    computational linear algebra dashboard comparing direct vs. iterative solvers.
+
 [2026-10-02] – Secure API Key via Environment Variable
 -------------------------------------------------------
 CHANGE: Moved the hardcoded Gemini API key out of source code and into the
@@ -39,22 +122,46 @@ SECURITY IMPACT: High – eliminates credentials in source control.
 FEATURE OVERVIEW (current state)
 ================================================================================
 
-Core Engine:
-  - Cascading multi-model Gemini API calls (6 models, auto-fallback)
-  - Deterministic offline equation parser (zero network, regex-based)
-  - In-memory LRU-style cache (0 ms repeat responses)
-  - Pre-seeded classroom demo presets (100% uptime guarantee)
-  - Exponential backoff on 503 / 429 errors
-  - Direct REST HTTP fallback when SDK is unavailable
+Core Linear Algebra & Numerical Engine:
+  - Direct Solvers:
+      • Gaussian Elimination with partial pivoting, step-by-step row operations,
+        and back-substitution.
+      • Gauss-Jordan Elimination with Reduced Row Echelon Form (RREF).
+      • Cramer's Rule via determinants with sub-determinant breakdown.
+      • Matrix Inversion Method (X = A⁻¹B).
+  - Iterative Numerical Solvers & Analytics:
+      • Jacobi Iterative Method with Gershgorin diagonal dominance verification.
+      • Step-by-step iteration coordinate evolution history.
+      • Statistical dispersion profiling (Variance σ² and Standard Deviation σ).
+      • Running Variance vs. Std Dev Crossover detection (σ = σ² sign changes).
+      • 3D convergence trajectory tracking.
+  - Solvability & Consistency Analysis:
+      • Full rank testing via Rouché–Capelli theorem.
+      • Determinant singularity checks.
+      • Inconsistent vs Underdetermined vs Unique solution classifications.
 
 AI Integration:
-  - google-genai SDK with structured JSON schema (Pydantic)
-  - HTTP urllib fallback for environments without the SDK
+  - Cascading multi-model Gemini API calls (6 models, auto-fallback).
+  - Deterministic offline equation parser (zero network, regex-based).
+  - In-memory LRU-style cache (0 ms repeat responses).
+  - Pre-seeded classroom demo presets (100% uptime guarantee).
+  - Exponential backoff on 503 / 429 errors.
+  - Direct REST HTTP fallback when SDK is unavailable.
+  - google-genai SDK with structured JSON schema (Pydantic).
+  - HTTP urllib fallback for environments without the SDK.
+
+Frontend & UI Analytics:
+  - Glassmorphic dark-mode dashboard with interactive matrix grid and live equation preview.
+  - Interactive Chart.js visualizations for variable allocation, convergence trajectories,
+    and running statistical crossovers.
+  - Dynamic step-by-step accordion timeline.
+  - Zero-downtime offline browser execution engine (runs both Gaussian and Jacobi clientside).
+  - Zero-downtime client-side word problem preset matcher.
 
 Security:
-  - API key stored in .env (git-ignored)
-  - python-dotenv loads key at startup automatically
-  - No credentials in committed source code
+  - API key stored in .env (git-ignored).
+  - python-dotenv loads key at startup automatically.
+  - No credentials in committed source code.
 
 Dependencies (requirements.txt):
   - fastapi >= 0.110.0
