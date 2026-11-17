@@ -13,6 +13,7 @@ from matrix_engine import (
     solve_gauss_jordan,
     solve_cramers_rule,
     solve_matrix_inversion,
+    solve_jacobi_iteration,
     format_matrix
 )
 from ai_parser import parse_word_problem_with_gemini
@@ -37,15 +38,23 @@ try:
     class MatrixSolveRequest(BaseModel):
         matrix_a: List[List[float]]
         vector_b: List[float]
-        method: str = "gaussian"  # gaussian, gauss_jordan, cramer, inversion
+        method: str = "gaussian"  # gaussian, gauss_jordan, cramer, inversion, jacobi
+        num_iterations: Optional[int] = 15
         variable_labels: Optional[List[str]] = None
 
     class WordProblemRequest(BaseModel):
         problem: str
         method: str = "gaussian"
+        num_iterations: Optional[int] = 15
         api_key: Optional[str] = None
 
-    def execute_solver(method: str, matrix_a: List[List[float]], vector_b: List[float], labels: Optional[List[str]] = None) -> Dict[str, Any]:
+    def execute_solver(
+        method: str, 
+        matrix_a: List[List[float]], 
+        vector_b: List[float], 
+        labels: Optional[List[str]] = None,
+        num_iterations: int = 15
+    ) -> Dict[str, Any]:
         method = method.lower()
         if method == "gauss_jordan":
             res = solve_gauss_jordan(matrix_a, vector_b)
@@ -53,6 +62,8 @@ try:
             res = solve_cramers_rule(matrix_a, vector_b)
         elif method == "inversion":
             res = solve_matrix_inversion(matrix_a, vector_b)
+        elif method == "jacobi":
+            res = solve_jacobi_iteration(matrix_a, vector_b, num_iterations=num_iterations)
         else:
             res = solve_gaussian_elimination(matrix_a, vector_b)
 
@@ -66,7 +77,13 @@ try:
     @app.post("/api/solve/matrix")
     async def solve_matrix_endpoint(req: MatrixSolveRequest):
         try:
-            result = execute_solver(req.method, req.matrix_a, req.vector_b, req.variable_labels)
+            result = execute_solver(
+                req.method, 
+                req.matrix_a, 
+                req.vector_b, 
+                req.variable_labels, 
+                num_iterations=req.num_iterations or 15
+            )
             return JSONResponse(content=result)
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
@@ -90,15 +107,27 @@ try:
         explanations = ai_result["explanation_of_equations"]
 
         # 2. Solve matrix
-        solve_result = execute_solver(req.method, matrix_a, vector_b, labels)
-        solve_result["ai_parsed"] = {
-            "matrix_a": matrix_a,
-            "vector_b": vector_b,
-            "variable_labels": labels,
-            "explanation_of_equations": explanations,
-            "source": ai_result.get("source", "Google Gemini")
-        }
-        return JSONResponse(content=solve_result)
+        try:
+            solve_result = execute_solver(
+                req.method, 
+                matrix_a, 
+                vector_b, 
+                labels, 
+                num_iterations=req.num_iterations or 15
+            )
+            solve_result["ai_parsed"] = {
+                "matrix_a": matrix_a,
+                "vector_b": vector_b,
+                "variable_labels": labels,
+                "explanation_of_equations": explanations,
+                "source": ai_result.get("source", "Google Gemini")
+            }
+            return JSONResponse(content=solve_result)
+        except Exception as e:
+            return JSONResponse(status_code=400, content={
+                "status": "Solving Error",
+                "error": str(e)
+            })
 
     @app.get("/api/health")
     async def health_check():

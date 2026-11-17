@@ -5,6 +5,78 @@
 UPDATE LOG
 ================================================================================
 
+[2026-11-17] – Merge: Jacobi Branch Integrated Into the Monochrome UI
+-----------------------------------------------------------------------
+CHANGE: Merged origin/main (61ab8c5 "jacobi" — iterative solver, convergence
+        analytics and offline resilience) into the redesigned frontend
+        (0fa697e "UI updates"). Four files conflicted; all were resolved by
+        keeping the new monochrome UI as the visual source of truth and
+        porting every Jacobi feature into it.
+
+CONFLICT RESOLUTION:
+  - static/index.html
+      • Preset chips: kept the redesigned chip row (sentence-case labels,
+        aria-hidden icons, type="button") and added the jacobi_dominant chip
+        as "Jacobi dominant".
+      • Method selector: kept the select-shell wrapper and option wording,
+        appended "Jacobi iteration — numerical trajectory".
+      • Restored #jacobi-options-group (max-iterations input) beside the
+        selector and kept the redesigned #btn-solve button (btn-solve class,
+        aria-hidden equals icon, spinner) instead of the old btn-primary.
+  - static/app.js
+      • loadMatrixPreset merges both behaviours: silent loading on first
+        paint plus automatic Jacobi selection and iteration-control reveal
+        when the dominant preset is picked.
+      • Status banner uses one regex that also matches Diverged /
+        Failed to Converge / is_diverged, so Jacobi divergence gets the deep
+        mocha inconsistent ticket.
+      • Status icon logic (infinity / warning / check) kept for every state,
+        divergence included.
+      • Divergence fallback rebuilt as real DOM (new .status-action row with
+        a btn-tiny button and addEventListener) instead of an inline onclick
+        string, and the explanation is written with textContent so solver
+        messages can never inject HTML.
+      • Empty results grid: divergence shows a themed .no-solution-note-alert
+        explaining the |A_ii| ≤ ∑|A_ij| condition, otherwise the standard
+        no-unique-solution note (chart and copy button hidden in both cases).
+      • Jacobi analytics render after the step list; the mobile results
+        scroll now runs last so both features coexist.
+      • Trajectory and crossover Chart.js configs re-themed to the monochrome
+        palette (mocha/dim/olive/ash series, mocha axes and grids, JetBrains
+        Mono ticks) instead of the removed dark indigo theme.
+      • Iteration-table accent moved from a deleted CSS variable into the
+        dedicated .iteration-index-cell class.
+      • elements.chartCard now resolves #allocation-chart-card, so hiding the
+        value profile can never target a Jacobi chart.
+  - static/style.css
+      • Kept the responsive breakpoints (1180 / 1080 / 760 / 480) and the
+        reduced-motion + forced-colors blocks, then appended a re-themed
+        Jacobi section after them: option row, dominance ticket, dispersion
+        cards, crossover pills and a sticky-header iteration table.
+      • Removed every dark-theme dependency (--text-muted, --text-dim,
+        --text-main, --border-subtle, indigo/cyan tints) in favour of the
+        role tokens (--ink, --paper, --accent-wash, --paper-deep, --muted).
+      • Added the missing .badge-math / .badge-ai pill styles and the
+        .no-solution-note-alert state, both used by the Jacobi UI.
+  - PROJECT_IMPROVEMENTS_SUMMARY.txt
+      • Both update logs kept in reverse-chronological order (UI entries,
+        then the 2026-10-29 Jacobi entries) plus this merge entry.
+
+PRESERVED:
+  - Backend unchanged by this resolution: solve_jacobi_iteration, the
+    /api/solve and /api/solve-word-problem routes, native-type JSON
+    serialisation and both offline fallbacks all remain as committed.
+  - Frontend is still framework-free (plain HTML/CSS/JS), no build step.
+
+VERIFICATION:
+  - Zero conflict markers left; git diff --diff-filter=U is empty.
+  - node --check static/app.js passes; CSS brace depth balanced (0) and no
+    dangling dark-theme tokens remain.
+  - Jacobi run on the dominant preset (10x − y + 2z = 6, −x + 11y − z = 25,
+    2x − y + 10z = −11) renders dominance ticket, dispersion cards, both
+    charts and the history table inside the paper theme; diverging systems
+    show the mocha ticket with the one-click Gaussian fallback.
+
 [2026-11-04] – Monochrome Palette Migration & Math-Motif Artwork (Frontend Only)
 -------------------------------------------------------------------------------
 CHANGE: Retuned the whole Riff-inspired UI to the supplied five-colour
@@ -190,6 +262,89 @@ PRESERVED (UNCHANGED BACKEND AND BEHAVIOUR):
     copy-to-clipboard, API-key storage and client-side Gaussian fallback.
   - No frontend framework or build step added; still plain HTML/CSS/JS.
 
+[2026-10-29] – High-Availability Word Problem Resilience & Serialization Fix
+--------------------------------------------------------------------------------
+CHANGE: Resolved "Failed to solve word problem" error and Jacobi divergence guard:
+  1. Fixed FastAPI/Starlette JSON serialization in `matrix_engine.py`:
+     NumPy boolean and float types (`np.bool_`, `np.floating`) were causing
+     `TypeError: Object of type bool_ is not JSON serializable` in `JSONResponse`.
+     All outputs are now explicitly coerced to native Python primitives (`bool`, `float`, `int`).
+  2. Added mathematical error expansion divergence detection to `solve_jacobi_iteration`:
+     Detects when consecutive step errors expand (diff[k] > diff[k-1]) on non-dominant systems.
+     Suppresses erroneous divergent values and provides a 1-click "Switch to Gaussian & Solve"
+     button directly in the banner and solution grid.
+  3. Added server-side error trapping in `solve_word_problem_endpoint` to cleanly
+     return structured JSON errors instead of unhandled 500 crashes.
+  4. Added client-side Word Problem Preset matching in `static/app.js`
+     (`trySolveWordProblemOffline`): If the backend is restarting or offline,
+     the frontend automatically detects preset problems (e.g., Farm Animals chickens/cows)
+     and solves them in-browser with 0ms latency, guaranteeing 100% demo uptime.
+  5. Auto-Reset Method on Mode Switch: When switching to the AI Word Problem Solver
+     tab, the solution method automatically resets from Jacobi back to Gaussian
+     Elimination to ensure word problems solve with exact direct algebra.
+
+[2026-10-29] – Jacobi Iterative Numerical Method & Convergence Analytics Suite
+--------------------------------------------------------------------------------
+CHANGE: Integrated teammate's numerical linear algebra algorithm (from project1.pdf)
+        into the MatSolve engine and web platform. Bridges direct algebraic
+        elimination with iterative numerical methods and statistical analytics.
+
+MATHEMATICAL & ALGORITHMIC ADDITIONS:
+  - Jacobi Iterative Method:
+      • Fixed-point iteration: x_i^(k+1) = (b_i - ∑_{j≠i} A_ij x_j^(k)) / A_ii
+      • Initial state vector x^(0) = [0, 0, ..., 0] with step-by-step coordinate logging.
+      • Non-zero diagonal pre-check and strict diagonal dominance test:
+        |A_ii| > ∑_{j≠i} |A_ij| (guarantees convergence by Gershgorin Circle Theorem).
+      • Integrated determinant test det(A) and Row Echelon Form (REF) rank analysis
+        via Rouché–Capelli theorem.
+  - Statistical Dispersion Across Iterations (Teammate Step 7):
+      • Calculates total variance (σ²) and standard deviation (σ) for each variable
+        across all iteration steps to measure dispersion during convergence.
+  - Running Variance vs. Std Dev Crossover Profile (Teammate Step 9):
+      • Computes cumulative running variance and running standard deviation starting
+        from step 2.
+      • Dynamically locates sign change / zero-crossings where running σ = σ² and logs
+        exact iteration index and value.
+  - 3D Convergence Trajectory:
+      • Records coordinates (x, y, z) across iteration indices k = 0...N.
+
+FILES MODIFIED:
+  - matrix_engine.py
+      • Implemented `solve_jacobi_iteration(A_in, B_in, num_iterations, tol)`.
+      • Returns convergence status, dominance verification, iteration history,
+        statistics, crossover points, and step breakdown.
+      • Guaranteed native Python type serialization (`bool`, `float`, `int`).
+  - server.py
+      • Added `"jacobi"` method support to `MatrixSolveRequest` and `WordProblemRequest`.
+      • Updated `execute_solver` to route to `solve_jacobi_iteration` with customizable
+        iteration depth.
+      • Wrapped solver execution in `solve_word_problem_endpoint` with structured error handling.
+  - static/index.html
+      • Added "Jacobi Iteration (Numerical Analysis & Trajectory)" method option.
+      • Added iteration count input (`#jacobi-iter-input`).
+      • Added "Jacobi Diagonally Dominant" preset button.
+      • Added `#jacobi-analytics-section` containing:
+          - Diagonal dominance condition card with row-by-row pivot inspection table.
+          - Statistical dispersion cards (Variance & Std Dev per variable).
+          - Interactive convergence trajectory line chart (Chart.js).
+          - Running Variance vs. Std Dev Crossover line chart with crossover badges.
+          - Coordinate evolution history data table.
+  - static/style.css
+      • Added styles for Jacobi controls, dominance banner (green/amber status),
+        stat cards, crossover badges, and monospace iteration tables.
+  - static/app.js
+      • Added `jacobi_dominant` preset (10x - y + 2z = 6, etc.) resolving to [1, 2, -1].
+      • Added dynamic UI toggling for iteration count when Jacobi is selected.
+      • Added `renderJacobiAnalytics`, `renderJacobiTrajectoryChart`,
+        `renderJacobiCrossoverChart`, and `renderIterationHistoryTable`.
+      • Added `runClientSideJacobi` offline fallback for guaranteed 100% demo uptime.
+      • Added `trySolveWordProblemOffline` to ensure word problems solve seamlessly
+        even if backend is unreachable or restarted.
+
+ACADEMIC / PRESENTATION IMPACT:
+  - Elevates project from a standard direct matrix calculator into an advanced
+    computational linear algebra dashboard comparing direct vs. iterative solvers.
+
 [2026-10-02] – Secure API Key via Environment Variable
 -------------------------------------------------------
 CHANGE: Moved the hardcoded Gemini API key out of source code and into the
@@ -224,22 +379,50 @@ SECURITY IMPACT: High – eliminates credentials in source control.
 FEATURE OVERVIEW (current state)
 ================================================================================
 
-Core Engine:
-  - Cascading multi-model Gemini API calls (6 models, auto-fallback)
-  - Deterministic offline equation parser (zero network, regex-based)
-  - In-memory LRU-style cache (0 ms repeat responses)
-  - Pre-seeded classroom demo presets (100% uptime guarantee)
-  - Exponential backoff on 503 / 429 errors
-  - Direct REST HTTP fallback when SDK is unavailable
+Core Linear Algebra & Numerical Engine:
+  - Direct Solvers:
+      • Gaussian Elimination with partial pivoting, step-by-step row operations,
+        and back-substitution.
+      • Gauss-Jordan Elimination with Reduced Row Echelon Form (RREF).
+      • Cramer's Rule via determinants with sub-determinant breakdown.
+      • Matrix Inversion Method (X = A⁻¹B).
+  - Iterative Numerical Solvers & Analytics:
+      • Jacobi Iterative Method with Gershgorin diagonal dominance verification.
+      • Step-by-step iteration coordinate evolution history.
+      • Statistical dispersion profiling (Variance σ² and Standard Deviation σ).
+      • Running Variance vs. Std Dev Crossover detection (σ = σ² sign changes).
+      • 3D convergence trajectory tracking.
+  - Solvability & Consistency Analysis:
+      • Full rank testing via Rouché–Capelli theorem.
+      • Determinant singularity checks.
+      • Inconsistent vs Underdetermined vs Unique solution classifications.
 
 AI Integration:
-  - google-genai SDK with structured JSON schema (Pydantic)
-  - HTTP urllib fallback for environments without the SDK
+  - Cascading multi-model Gemini API calls (6 models, auto-fallback).
+  - Deterministic offline equation parser (zero network, regex-based).
+  - In-memory LRU-style cache (0 ms repeat responses).
+  - Pre-seeded classroom demo presets (100% uptime guarantee).
+  - Exponential backoff on 503 / 429 errors.
+  - Direct REST HTTP fallback when SDK is unavailable.
+  - google-genai SDK with structured JSON schema (Pydantic).
+  - HTTP urllib fallback for environments without the SDK.
+
+Frontend & UI Analytics:
+  - Paper-and-ink dashboard (ash grey canvas, deep mocha outlines, hard offset
+    shadows) with interactive matrix grid and live equation preview.
+  - Interactive Chart.js visualizations for variable allocation, Jacobi
+    convergence trajectories, and running statistical crossovers — all themed
+    to the monochrome palette.
+  - Diagonal dominance ticket with per-row pivot inspection table for iterative runs.
+  - Dynamic step-by-step accordion timeline.
+  - Zero-downtime offline browser execution engine (runs both Gaussian and Jacobi clientside).
+  - Zero-downtime client-side word problem preset matcher.
+  - One-click "switch to Gaussian" fallback when Jacobi diverges.
 
 Security:
-  - API key stored in .env (git-ignored)
-  - python-dotenv loads key at startup automatically
-  - No credentials in committed source code
+  - API key stored in .env (git-ignored).
+  - python-dotenv loads key at startup automatically.
+  - No credentials in committed source code.
 
 Frontend / UX:
   - Riff-inspired monochrome design system (ash grey · dim grey · grey olive ·
@@ -251,6 +434,10 @@ Frontend / UX:
   - Colour-coded result tickets for unique, inconsistent and infinite systems
   - Expandable semantic step-by-step matrix operation cards
   - Themed Chart.js value profile with automatic empty-state hiding
+  - Jacobi analytics panel that reuses the same card/ticket language:
+    dominance verdict + pivot table, σ²/σ dispersion cards, trajectory and
+    crossover charts, and a sticky-header iteration history table
+  - Divergence ticket with a one-click switch back to Gaussian elimination
   - Accessible Gemini API key modal (focus trap, Escape, focus restore)
   - Keyboard-navigable tabs, skip link, visible focus and reduced-motion support
   - Fully responsive from 5x5 desktop matrices down to 320px phones
@@ -292,7 +479,8 @@ PRESENTATION TALKING POINTS — UI REDESIGN
 
 4. Engineering decisions
    - No framework: the existing HTML/CSS/JS architecture is retained.
-   - FastAPI endpoints, request shapes and all four solvers are untouched.
+   - FastAPI endpoints, request shapes and every solver (four direct methods plus
+     Jacobi iteration) are untouched by the UI work.
    - Colour is expressed as role tokens (--accent, --accent-2, --accent-3), so
      the palette is a single edit rather than a 350-rule find-and-replace.
    - Contrast was measured, not eyeballed: white on dim grey is 5.48:1, mocha on
@@ -301,9 +489,13 @@ PRESENTATION TALKING POINTS — UI REDESIGN
    - Steps now use semantic <details> elements for built-in keyboard support.
    - Accessibility includes skip navigation, visible focus, ARIA tabs, a focus-
      trapped modal, reduced-motion handling and layouts verified down to 320px.
-   - The Chart.js view is themed to the new palette and hides automatically when
-     the system has no unique solution; it is a progressive enhancement, so a
-     missing CDN can never block the numeric results or step cards.
+   - The Chart.js views are themed to the palette and hide automatically when
+     they have nothing to plot; they are a progressive enhancement, so a missing
+     CDN can never block the numeric results or step cards.
+   - The Jacobi commit merged cleanly at the feature level but assumed the old
+     dark theme; its CSS was re-expressed in role tokens and its divergence
+     banner rebuilds the fallback button as a real DOM node instead of an
+     inline-onclick HTML string, so solver messages stay text-only.
 
 5. Demo sequence suggestion
    a. Load the Farm Animals word problem and solve it.
@@ -311,8 +503,11 @@ PRESENTATION TALKING POINTS — UI REDESIGN
    c. Switch to Direct Matrix, load "No solution", and show the deep-mocha
       ticket (the heaviest surface on the page, deliberately different from the
       ash "unique" ticket).
-   d. Load "Unique 3×3", compare methods, then open the Gemini key modal.
-   e. Resize to phone width to demonstrate the stacked responsive layout.
+   d. Load "Jacobi dominant", pick "Jacobi iteration", and walk through the
+      dominance verdict, dispersion cards, trajectory + crossover charts and the
+      iteration history table.
+   e. Load "Unique 3×3", compare methods, then open the Gemini key modal.
+   f. Resize to phone width to demonstrate the stacked responsive layout.
 
 
 

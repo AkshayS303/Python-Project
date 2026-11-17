@@ -2527,3 +2527,309 @@ body.modal-open {
     border: 2px solid CanvasText;
   }
 }
+
+/* ================= Jacobi Iterative Controls & Analytics ================= */
+.badge-math,
+.badge-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--accent-wash);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+.badge-ai {
+  background: var(--paper-deep);
+}
+
+.jacobi-options-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: var(--accent-wash);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  padding: 8px 12px;
+}
+
+.jacobi-options-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.iter-input {
+  width: 76px !important;
+  text-align: center;
+  padding: 6px 8px !important;
+  font-family: var(--font-mono);
+}
+
+.jacobi-analytics-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 6px;
+}
+
+/* Diagonal dominance ticket */
+.dominance-card {
+  background: var(--accent-2-wash);
+  border: var(--bw) solid var(--ink);
+  border-radius: 22px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.dominance-card.not-dominant {
+  background: var(--paper-deep);
+}
+
+.dominance-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.dominance-header i {
+  font-size: 0.95rem;
+}
+
+.dominance-card p {
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.dominance-table-wrapper {
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.dominance-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  background: var(--white);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+}
+
+.dominance-mini-table th,
+.dominance-mini-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(56, 48, 46, 0.14);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dominance-mini-table th {
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--accent-2-wash);
+}
+
+.dominance-mini-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Statistical dispersion cards */
+.stats-overview-card {
+  background: var(--paper);
+  border: var(--bw) solid var(--ink);
+  border-radius: 22px;
+  padding: 16px 18px 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.stats-card {
+  background: var(--white);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-xs);
+  padding: 12px 14px;
+}
+
+.stats-card-var {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.stats-row .label {
+  color: var(--muted);
+}
+
+.stats-row .val {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.chart-subtext {
+  margin-top: 2px;
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+}
+
+/* σ = σ² crossover badges */
+.crossover-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.crossover-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  background: var(--accent-wash);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  padding: 4px 10px;
+}
+
+/* Iteration history table */
+.iteration-history-card {
+  background: var(--paper);
+  border: var(--bw) solid var(--ink);
+  border-radius: 22px;
+  padding: 16px 18px 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.iteration-table-wrapper {
+  max-height: 280px;
+  overflow: auto;
+  margin-top: 12px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+}
+
+.iteration-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.iteration-table th {
+  position: sticky;
+  top: 0;
+  background: var(--accent-2-wash);
+  padding: 8px 12px;
+  text-align: left;
+  color: var(--ink);
+  font-weight: 700;
+  border-bottom: 2px solid var(--ink);
+}
+
+.iteration-table td {
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(56, 48, 46, 0.12);
+}
+
+.iteration-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.iteration-table tr:hover td {
+  background: var(--accent-3-wash);
+}
+
+.iteration-index-cell {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* Divergence fallback action inside the status ticket */
+.status-action {
+  margin-top: 12px;
+}
+
+.status-action-btn {
+  font-size: 0.66rem;
+  padding: 6px 12px;
+}
+
+.no-solution-note-alert {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  color: var(--ink);
+  background: var(--paper-deep);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+
+.no-solution-note-alert i {
+  margin-top: 2px;
+}
+
+@media (max-width: 480px) {
+  .jacobi-options-group {
+    width: 100%;
+  }
+
+  .iteration-history-card,
+  .stats-overview-card,
+  .dominance-card {
+    padding: 14px;
+  }
+}
