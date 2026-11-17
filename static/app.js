@@ -61,6 +61,7 @@ const elements = {
   solveSpinner: document.getElementById('solve-spinner'),
   
   // Results
+  resultsSection: document.getElementById('results-section'),
   emptyState: document.getElementById('empty-state-view'),
   resultsContent: document.getElementById('results-content-view'),
   statusBanner: document.getElementById('status-banner'),
@@ -78,6 +79,7 @@ const elements = {
   
   solvedVariablesGrid: document.getElementById('solved-variables-grid'),
   btnCopySolutions: document.getElementById('btn-copy-solutions'),
+  chartCard: document.querySelector('.chart-container-card'),
   stepCount: document.getElementById('step-count'),
   stepsTimeline: document.getElementById('steps-timeline'),
   chartCanvas: document.getElementById('solutionChart'),
@@ -96,7 +98,7 @@ const elements = {
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   renderMatrixGrid(state.matrixSize);
-  loadMatrixPreset('unique3');
+  loadMatrixPreset('unique3', true);
 });
 
 // Setup Events
@@ -104,6 +106,24 @@ function setupEventListeners() {
   // Tabs
   elements.tabWordProblem.addEventListener('click', () => switchMode('word-problem'));
   elements.tabDirectMatrix.addEventListener('click', () => switchMode('direct-matrix'));
+
+  // Keyboard navigation for the mode tabs (WAI-ARIA tabs pattern)
+  const modeTabs = [elements.tabWordProblem, elements.tabDirectMatrix];
+  modeTabs.forEach((tab, index) => {
+    tab.addEventListener('keydown', (e) => {
+      let targetIndex = null;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') targetIndex = (index + 1) % modeTabs.length;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') targetIndex = (index - 1 + modeTabs.length) % modeTabs.length;
+      if (e.key === 'Home') targetIndex = 0;
+      if (e.key === 'End') targetIndex = modeTabs.length - 1;
+      if (targetIndex === null) return;
+
+      e.preventDefault();
+      const target = modeTabs[targetIndex];
+      target.focus();
+      switchMode(target === elements.tabWordProblem ? 'word-problem' : 'direct-matrix');
+    });
+  });
 
   // Word problem preset chips
   document.querySelectorAll('[data-preset]').forEach(chip => {
@@ -143,20 +163,16 @@ function setupEventListeners() {
   elements.btnCopySolutions.addEventListener('click', copySolutionsToClipboard);
 
   // API Key Modal
-  elements.btnApiKey.addEventListener('click', () => {
-    elements.customApiKeyInput.value = state.apiKey;
-    elements.apiKeyModal.classList.remove('hidden');
-  });
-
-  elements.btnCloseModal.addEventListener('click', () => {
-    elements.apiKeyModal.classList.add('hidden');
-  });
+  elements.btnApiKey.addEventListener('click', openApiModal);
+  elements.btnCloseModal.addEventListener('click', closeApiModal);
 
   elements.apiKeyModal.addEventListener('click', (e) => {
     if (e.target === elements.apiKeyModal) {
-      elements.apiKeyModal.classList.add('hidden');
+      closeApiModal();
     }
   });
+
+  document.addEventListener('keydown', handleModalKeydown);
 
   elements.btnSaveApiKey.addEventListener('click', () => {
     const key = elements.customApiKeyInput.value.trim();
@@ -170,7 +186,7 @@ function setupEventListeners() {
       localStorage.removeItem('matrixai_gemini_api_key');
       showToast('Reset to default backend key.');
     }
-    elements.apiKeyModal.classList.add('hidden');
+    closeApiModal();
   });
 
   elements.btnClearApiKey.addEventListener('click', () => {
@@ -179,8 +195,58 @@ function setupEventListeners() {
     localStorage.removeItem('matsolve_gemini_api_key');
     localStorage.removeItem('matrixai_gemini_api_key');
     showToast('Reset to default backend key.');
-    elements.apiKeyModal.classList.add('hidden');
+    closeApiModal();
   });
+}
+
+// Accessible modal helpers
+let lastFocusedElement = null;
+
+function openApiModal() {
+  const active = document.activeElement;
+  lastFocusedElement = (active && active !== document.body && typeof active.focus === 'function')
+    ? active
+    : elements.btnApiKey;
+  elements.customApiKeyInput.value = state.apiKey;
+  elements.apiKeyModal.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  window.setTimeout(() => elements.customApiKeyInput.focus(), 0);
+}
+
+function closeApiModal() {
+  if (elements.apiKeyModal.classList.contains('hidden')) return;
+  elements.apiKeyModal.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+  if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+    lastFocusedElement.focus();
+  }
+}
+
+function handleModalKeydown(e) {
+  if (elements.apiKeyModal.classList.contains('hidden')) return;
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeApiModal();
+    return;
+  }
+
+  if (e.key !== 'Tab') return;
+  const focusables = Array.from(
+    elements.apiKeyModal.querySelectorAll('button, input, a[href], select, textarea, [tabindex]:not([tabindex="-1"])')
+  ).filter(el => !el.disabled && el.offsetParent !== null);
+
+  if (focusables.length === 0) return;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
 }
 
 // Mode Switching
@@ -189,16 +255,20 @@ function switchMode(mode) {
   if (mode === 'word-problem') {
     elements.tabWordProblem.classList.add('active');
     elements.tabWordProblem.setAttribute('aria-selected', 'true');
+    elements.tabWordProblem.setAttribute('tabindex', '0');
     elements.tabDirectMatrix.classList.remove('active');
     elements.tabDirectMatrix.setAttribute('aria-selected', 'false');
+    elements.tabDirectMatrix.setAttribute('tabindex', '-1');
 
     elements.panelWordProblem.classList.add('active');
     elements.panelDirectMatrix.classList.remove('active');
   } else {
     elements.tabDirectMatrix.classList.add('active');
     elements.tabDirectMatrix.setAttribute('aria-selected', 'true');
+    elements.tabDirectMatrix.setAttribute('tabindex', '0');
     elements.tabWordProblem.classList.remove('active');
     elements.tabWordProblem.setAttribute('aria-selected', 'false');
+    elements.tabWordProblem.setAttribute('tabindex', '-1');
 
     elements.panelDirectMatrix.classList.add('active');
     elements.panelWordProblem.classList.remove('active');
@@ -224,6 +294,7 @@ function renderMatrixGrid(n) {
       input.dataset.col = c;
       input.dataset.matrix = 'A';
       input.value = r === c ? 1 : 0;
+      input.setAttribute('aria-label', `Coefficient row ${r + 1}, column ${c + 1}`);
       input.addEventListener('input', updateLiveEquations);
       rowEl.appendChild(input);
     }
@@ -241,6 +312,7 @@ function renderMatrixGrid(n) {
     inputB.dataset.row = r;
     inputB.dataset.matrix = 'B';
     inputB.value = (r + 1) * 2;
+    inputB.setAttribute('aria-label', `Constant term for row ${r + 1}`);
     inputB.addEventListener('input', updateLiveEquations);
     rowEl.appendChild(inputB);
 
@@ -251,7 +323,7 @@ function renderMatrixGrid(n) {
 }
 
 // Load Matrix Preset
-function loadMatrixPreset(key) {
+function loadMatrixPreset(key, silent = false) {
   const preset = MATRIX_PRESETS[key];
   if (!preset) return;
 
@@ -269,7 +341,7 @@ function loadMatrixPreset(key) {
   }
 
   updateLiveEquations();
-  showToast(`Loaded ${key} preset`);
+  if (!silent) showToast(`Loaded ${key} preset`);
 }
 
 // Read Current Matrix Values from UI
@@ -471,12 +543,24 @@ function renderResults(res) {
   elements.resultsContent.classList.remove('hidden');
 
   // Solvability Banner & Ranks
-  elements.statusTitle.textContent = res.status || 'Solved';
+  const statusText = res.status || 'Solved';
+  elements.statusTitle.textContent = statusText;
   elements.statusBanner.className = 'status-banner';
-  if (res.status && res.status.includes('No Solution')) {
+  if (/No Solution|No Unique|Singular|Zero|Inapplicable|Error/i.test(statusText)) {
     elements.statusBanner.classList.add('inconsistent');
-  } else if (res.status && res.status.includes('Infinite')) {
+  } else if (/Infinite/i.test(statusText)) {
     elements.statusBanner.classList.add('infinite');
+  }
+
+  const statusIcon = elements.statusBadge.querySelector('i');
+  if (statusIcon) {
+    if (/Infinite/i.test(statusText)) {
+      statusIcon.className = 'fa-solid fa-infinity';
+    } else if (/No Solution|No Unique|Singular|Zero|Inapplicable|Error/i.test(statusText)) {
+      statusIcon.className = 'fa-solid fa-triangle-exclamation';
+    } else {
+      statusIcon.className = 'fa-solid fa-circle-check';
+    }
   }
 
   elements.statusExplanation.textContent = res.message || 
@@ -516,6 +600,9 @@ function renderResults(res) {
   const sol = res.solution || [];
 
   if (sol && sol.length > 0) {
+    elements.btnCopySolutions.classList.remove('hidden');
+    elements.chartCard.classList.remove('hidden');
+
     sol.forEach((val, idx) => {
       const card = document.createElement('div');
       card.className = 'var-card';
@@ -530,8 +617,10 @@ function renderResults(res) {
     // Update Chart
     renderChart(labels.length ? labels : sol.map((_, i) => `x${i + 1}`), sol);
   } else {
+    elements.btnCopySolutions.classList.add('hidden');
+    elements.chartCard.classList.add('hidden');
     elements.solvedVariablesGrid.innerHTML = `
-      <div style="grid-column: 1 / -1; color: var(--text-dim); font-size: 0.88rem; padding: 12px;">
+      <div class="no-solution-note">
         No unique solution vector to display (system is inconsistent or underdetermined).
       </div>
     `;
@@ -543,55 +632,105 @@ function renderResults(res) {
 
   // Render Step-by-Step Row Transformations
   renderSteps(res.steps || []);
+
+  scrollToResultsOnSmallScreens();
+}
+
+// Bring the freshly rendered solution into view on stacked (mobile) layouts
+function scrollToResultsOnSmallScreens() {
+  if (!elements.resultsSection) return;
+  if (!window.matchMedia('(max-width: 1080px)').matches) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  elements.resultsSection.scrollIntoView({
+    behavior: reduceMotion ? 'auto' : 'smooth',
+    block: 'start'
+  });
 }
 
 // Render Chart.js Distribution
 function renderChart(labels, values) {
   if (state.chartInstance) {
     state.chartInstance.destroy();
+    state.chartInstance = null;
+  }
+
+  // The visualization is optional: never let a missing CDN block the results.
+  if (typeof Chart === 'undefined') {
+    elements.chartCard.classList.add('hidden');
+    console.warn('Chart.js unavailable — hiding the value profile.');
+    return;
   }
 
   const ctx = elements.chartCanvas.getContext('2d');
-  const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-  gradient.addColorStop(0, 'rgba(99, 102, 241, 0.85)');
-  gradient.addColorStop(1, 'rgba(6, 182, 212, 0.2)');
+  const gradient = ctx.createLinearGradient(0, 0, 0, 228);
+  gradient.addColorStop(0, '#6F6866');
+  gradient.addColorStop(1, '#38302E');
 
-  state.chartInstance = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Resolved Value',
-        data: values,
-        backgroundColor: gradient,
-        borderColor: '#6366f1',
-        borderWidth: 1.5,
-        borderRadius: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: 'rgba(17, 24, 39, 0.9)',
-          titleFont: { family: 'Outfit' },
-          bodyFont: { family: 'Fira Code' }
-        }
+  elements.chartCanvas.setAttribute(
+    'aria-label',
+    `Bar chart of solved values. ${labels.map((label, i) => `${label} = ${values[i]}`).join(', ')}`
+  );
+
+  try {
+    state.chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Resolved value',
+          data: values,
+          backgroundColor: gradient,
+          hoverBackgroundColor: '#9CAEA9',
+          borderColor: '#38302E',
+          borderWidth: 3,
+          borderRadius: 10,
+          borderSkipped: false,
+          maxBarThickness: 66
+        }]
       },
-      scales: {
-        x: {
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#9ca3af', font: { family: 'Inter' } }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#38302E',
+            titleColor: '#CCDAD1',
+            bodyColor: '#CCDAD1',
+            titleFont: { family: 'Space Grotesk', size: 12, weight: '700' },
+            bodyFont: { family: 'JetBrains Mono', size: 12 },
+            padding: 12,
+            cornerRadius: 10,
+            displayColors: false
+          }
         },
-        y: {
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#9ca3af', font: { family: 'Fira Code' } }
+        scales: {
+          x: {
+            grid: { display: false },
+            border: { color: '#38302E', width: 2 },
+            ticks: {
+              color: '#38302E',
+              font: { family: 'JetBrains Mono', size: 11, weight: '500' }
+            }
+          },
+          y: {
+            grid: { color: 'rgba(56, 48, 46, 0.12)' },
+            border: { color: '#38302E', width: 2 },
+            ticks: {
+              color: '#6F6866',
+              font: { family: 'JetBrains Mono', size: 10 }
+            },
+            grace: '12%'
+          }
         }
       }
-    }
-  });
+    });
+  } catch (err) {
+    console.warn('Chart rendering failed — hiding the value profile.', err);
+    elements.chartCard.classList.add('hidden');
+    state.chartInstance = null;
+  }
 }
 
 // Render Step-by-Step Accordion / Timeline
@@ -600,29 +739,38 @@ function renderSteps(steps) {
   elements.stepsTimeline.innerHTML = '';
 
   steps.forEach((step, idx) => {
-    const card = document.createElement('div');
+    const card = document.createElement('details');
     card.className = 'step-card';
+    if (idx === 0) card.open = true;
 
     let matrixHtml = '';
     if (step.matrix && Array.isArray(step.matrix)) {
+      const isAugmented = step.matrix.length > 0 && step.matrix[0].length === step.matrix.length + 1;
       const rowsHtml = step.matrix.map((row) => {
         const lastIdx = row.length - 1;
         const cellsHtml = row.map((val, cIdx) => {
-          const isB = cIdx === lastIdx;
+          const isB = isAugmented && cIdx === lastIdx;
           return `<td class="${isB ? 'b-col' : ''}">${typeof val === 'number' ? Number(val.toFixed(3)) : val}</td>`;
         }).join('');
         return `<tr>${cellsHtml}</tr>`;
       }).join('');
-      matrixHtml = `<table class="step-matrix-table">${rowsHtml}</table>`;
+      matrixHtml = `
+        <div class="step-matrix-scroll">
+          <table class="step-matrix-table" aria-label="Matrix state after operation ${idx + 1}">
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>`;
     }
 
     card.innerHTML = `
-      <div class="step-header">
+      <summary class="step-header">
         <span class="step-number-tag">Step ${idx + 1}</span>
         <span class="step-title">${step.title || 'Matrix Transformation'}</span>
+      </summary>
+      <div class="step-body">
+        <p class="step-desc">${step.description || ''}</p>
+        ${matrixHtml}
       </div>
-      <div class="step-desc">${step.description || ''}</div>
-      ${matrixHtml}
     `;
 
     elements.stepsTimeline.appendChild(card);
@@ -650,10 +798,12 @@ function copySolutionsToClipboard() {
 function setLoading(isLoading) {
   if (isLoading) {
     elements.btnSolve.disabled = true;
+    elements.btnSolve.setAttribute('aria-busy', 'true');
     elements.solveSpinner.classList.remove('hidden');
     elements.btnSolve.querySelector('span').textContent = 'Solving System...';
   } else {
     elements.btnSolve.disabled = false;
+    elements.btnSolve.setAttribute('aria-busy', 'false');
     elements.solveSpinner.classList.add('hidden');
     elements.btnSolve.querySelector('span').textContent = 'Calculate Solution';
   }

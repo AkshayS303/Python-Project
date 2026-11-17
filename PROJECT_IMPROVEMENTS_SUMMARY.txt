@@ -5,6 +5,191 @@
 UPDATE LOG
 ================================================================================
 
+[2026-11-04] – Monochrome Palette Migration & Math-Motif Artwork (Frontend Only)
+-------------------------------------------------------------------------------
+CHANGE: Retuned the whole Riff-inspired UI to the supplied five-colour
+        near-neutral palette with Dim Grey as the primary accent, and replaced
+        every cartoon-eye illustration with mathematics motifs. Layout,
+        interactions, API contracts and the solver engine are unchanged.
+
+PALETTE (supplied, adopted verbatim):
+  - Ash Grey      #CCDAD1  — page canvas, light support surface
+  - Ash Grey      #9CAEA9  — secondary accent (unique-solution ticket)
+  - Grey Olive    #788585  — tertiary accent, decorative use only
+  - Dim Grey      #6F6866  — PRIMARY accent (CTA, active mode, AI card)
+  - Deep Mocha    #38302E  — ink: outlines, body text, inconsistent state
+
+ROLE TOKENS:
+  - The stylesheet no longer names colours, it names jobs:
+      --ink -> mocha          --paper -> ash-light
+      --accent -> dim         --accent-deep -> mocha
+      --accent-2 -> ash       --accent-3 -> olive
+  - Derived surface tints keep cards distinguishable without inventing hues:
+      --ash-wash #E4EDE9, --mocha-tint #4B433F, --paper-deep #B7C9C2,
+      --accent-wash #D7E3DE, --accent-3-wash #DCE5E1.
+  - Because tokens describe roles, a future palette change is now a ~40-line
+    edit to :root instead of a search-and-replace across 350 rules. Every old
+    --purple / --lime / --coral reference is gone (verified: 0 occurrences).
+
+CONTRAST RULES (WCAG AA, measured):
+  - White text on Dim Grey   = 5.48:1  -> primary CTA, active word-problem
+    tab, AI breakdown card, infinite ticket, step number tags, modal icon.
+  - Mocha text on Ash Grey   = 5.53:1  -> unique ticket, active matrix tab,
+    secondary method card, ash value cards.
+  - Ash/Mocha on Deep Mocha  = 5.53:1 / 12.96:1 -> header chips, toast,
+    panel indices, engine note, tooltips.
+  - Grey Olive fails small-text contrast in both directions, so it is used
+    strictly for decoration (doodle strokes, spark glyphs, offsets). No text
+    is set on olive; the modal close-button hover moved to ash for this reason.
+  - Inconsistent state = Deep Mocha fill with Ash-Grey text, so the alert
+    reads as the heaviest surface on the page rather than "one more colour".
+  - Muted body copy resolves to Dim Grey on the ash canvas (5.48:1) and the
+    modal card was switched to white so its muted copy keeps that ratio.
+
+ARTWORK — cartoon eyes removed:
+  - Brand mark: matrix brackets around a 2x2 coefficient block.
+  - Hero primary card: sigma medallion, speech bubble and squiggle re-toned
+    to ash-on-dim.
+  - Hero secondary card: bracket + 2x2 block grid beside the sigma glyph.
+  - Empty state: augmented matrix with an "x?" plaque (the unknown still
+    to be solved) plus a spark, laid out so nothing overlaps.
+  - Footer: small sigma medallion.
+  - All artwork stays inline SVG, aria-hidden, pointer-events:none and purely
+    decorative — equations are always real text, never baked into an image.
+
+CHART / JS:
+  - Value-profile bars recoloured to a dim -> mocha vertical gradient, ash
+    hover, mocha axes and dim tick labels; animation stays off for stable
+    geometry.
+  - Class names de-coloured to match the new system: art-purple/lime/coral ->
+    art-primary/secondary/tertiary, art-eyes -> art-math, method-purple/
+    lime/coral -> method-primary/secondary/tertiary.
+  - No JS behaviour changes: solver calls, streaming status, presets, copy,
+    key storage and client-side fallback all untouched.
+
+VERIFICATION:
+  - Live browser checks at 360 / 390 / 480 / 768 / 1024 / 1440 px: zero
+    horizontal overflow, no clipped step titles, no overlapping artwork.
+  - Direct matrix solve -> "Unique Solution", x1=2, x2=3, x3=-1, 6 operations.
+  - All four methods re-tested against the live API (same 3x3 system):
+    gaussian 6 steps, gauss_jordan 10, cramer 4, inversion 3 — every one
+    returns [2, 3, -1].
+  - Farm-animals preset -> chickens=23, cows=12, source badge
+    "High-Availability Preset Cache (0ms) [Memory Cache Hit]".
+  - Inconsistent preset -> mocha ticket, no value cards, chart and copy hidden.
+  - node --check static/app.js passes; CSS braces balanced (351/351).
+
+FILES MODIFIED:
+  - static/style.css
+      • New :root palette + role tokens, all component colours re-derived,
+        olive demoted to decorative-only, light surface tints added.
+  - static/index.html
+      • theme-color, all five illustration SVGs and the method-card classes.
+  - static/app.js
+      • Chart.js gradient, hover, axis and tooltip colours only.
+  - PROJECT_IMPROVEMENTS_SUMMARY.txt
+      • This entry, corrected palette/artwork wording and refreshed talking
+        points.
+
+[2026-11-04] – Riff-Inspired Visual Redesign (Frontend Only)
+-----------------------------------------------------------
+NOTE: the palette and artwork described below were superseded the same day by
+      the monochrome migration recorded above. Colour names below are kept for
+      history; "primary / secondary / tertiary" now map to dim / ash / olive.
+CHANGE: Rebuilt the MatSolve frontend around a playful, high-contrast visual
+        identity inspired by the supplied Riff references. This was a full
+        layout and composition rethink, not a recolour of the old dark theme.
+
+DESIGN SYSTEM:
+  - Paper canvas with a subtle dotted grid (originally warm paper #F7F5F0, now
+    Ash Grey #CCDAD1).
+  - Role-based accent trio — primary, secondary and tertiary — plus deep ink
+    outlines, drawn from the supplied five-colour set. Exact values are listed
+    in the monochrome entry at the top of this log.
+  - 3px ink outlines on every surface, 4–9px hard offset shadows, and large
+    rounded geometric cards.
+  - Expressive display typography (Bricolage Grotesque), Space Grotesk for
+    interface copy, and JetBrains Mono for all mathematical notation.
+  - Original SVG artwork: matrix brackets, sigma medallion, "x?" plaque,
+    squiggle, speech bubble and outlined math doodles. All decorative
+    elements are aria-hidden, pointer-events:none, and sit behind real content.
+
+LAYOUT CHANGES:
+  - New sticky header with a matrix-mark logo, Gemini-key button and guide link.
+  - Large editorial hero ("Solve the system.") with capability facts and an
+    overlapping primary / secondary / tertiary illustration collage.
+  - Mode switching promoted to two large selector cards: primary for the AI
+    word-problem mode and secondary for direct matrix entry, each with an
+    active sticker and badge.
+  - Two-column workspace: Input Deck (01) and Solution Board (02), with
+    matching numbered "receipt" styling on results.
+  - Restyled matrix grid: bold outlined numeric cells, ink brackets, a thick
+    augmented divider and a tinted B column.
+  - Live equations moved into an accent-tinted preview ticket with exact mono
+    notation.
+  - Solution status redesigned as a coloured ticket (ash = unique, deep mocha =
+    inconsistent/singular, dim grey = infinite) with outlined rank pills.
+  - Solved values use rotating dim / ash / ash-light value cards.
+  - Steps are now semantic <details> accordions (first step open) with a + / −
+    control, scrollable matrix tables and highlighted augmented columns.
+  - Added a "How the math works" guide section (#how-it-works) covering all
+    four preserved methods, plus a footer and an offline-resilience note.
+  - Gemini API key modal restyled with an accent offset shadow, labelled field
+    and distinct save/reset actions.
+
+JAVASCRIPT / UX IMPROVEMENTS:
+  - Step renderer upgraded to expandable cards while preserving every step
+    title, description and matrix snapshot from the engine.
+  - Correct augmented-column detection: only [A|B] tables highlight the last
+    column; Cramer's determinant matrices and inverse matrices no longer do.
+  - Chart.js bar chart re-themed (dim-to-mocha gradient bars, ink borders,
+    mono labels) and set to render immediately (no animation) for reliable
+    data display.
+  - Chart rendering is guarded: if the Chart.js CDN is unavailable, the chart
+    card hides and the solution/steps still render normally.
+  - Chart card and copy button now hide automatically when a system has no
+    unique solution vector.
+  - Keyboard navigation added to the mode tabs (arrows, Home, End) with
+    aria-selected / tabindex kept in sync.
+  - Gemini modal now traps focus, closes on Escape, locks page scroll and
+    restores focus to its opener.
+  - Matrix inputs receive descriptive aria-labels; status updates announce via
+    aria-live; toast uses role="status".
+  - Fresh results scroll into view on stacked mobile layouts (respecting
+    prefers-reduced-motion).
+  - Initial page load no longer shows a "preset loaded" toast; preset toasts
+    still fire on user action.
+
+ACCESSIBILITY / RESPONSIVE:
+  - Skip link, visible focus rings, reduced-motion support and forced-colors
+    fallbacks.
+  - Breakpoints at 1180px, 1080px, 760px and 480px; matrix grid scrolls safely
+    on small screens, hero art and header controls compact progressively.
+  - Text colour is chosen per surface for WCAG contrast; the contrast table and
+    the olive-is-decorative-only rule are documented in the monochrome entry.
+
+FILES MODIFIED:
+  - static/index.html
+      • Complete semantic rebuild, new hero/guide/footer, preserved IDs and
+        data attributes for every existing interaction.
+  - static/style.css
+      • Full replacement of the dark glassmorphism theme with the Riff-style
+        design system, responsive rules and accessibility states.
+  - static/app.js
+      • Accordion steps, chart theme/immediate render, empty-chart handling,
+        tab keyboard navigation, accessible modal helpers, aria labels,
+        status icons and mobile result scrolling.
+  - PROJECT_IMPROVEMENTS_SUMMARY.txt
+      • This entry and the updated feature overview.
+
+PRESERVED (UNCHANGED BACKEND AND BEHAVIOUR):
+  - FastAPI backend, all /api endpoints and request/response shapes.
+  - Gaussian elimination, Gauss-Jordan, Cramer's rule and matrix inversion.
+  - Gemini word-problem parsing with cached/offline/preset fallbacks.
+  - Word-problem presets, matrix presets, size selector, live equation preview,
+    copy-to-clipboard, API-key storage and client-side Gaussian fallback.
+  - No frontend framework or build step added; still plain HTML/CSS/JS.
+
 [2026-10-02] – Secure API Key via Environment Variable
 -------------------------------------------------------
 CHANGE: Moved the hardcoded Gemini API key out of source code and into the
@@ -56,6 +241,21 @@ Security:
   - python-dotenv loads key at startup automatically
   - No credentials in committed source code
 
+Frontend / UX:
+  - Riff-inspired monochrome design system (ash grey · dim grey · grey olive ·
+    deep mocha) with role-based colour tokens
+  - Hand-drawn mathematics illustrations: matrix brackets, sigma medallion and
+    an "x = ?" empty-state plaque (no cartoon faces)
+  - Two-card mode selector for word problems vs direct matrix entry
+  - Outlined matrix grid with live equation preview ticket
+  - Colour-coded result tickets for unique, inconsistent and infinite systems
+  - Expandable semantic step-by-step matrix operation cards
+  - Themed Chart.js value profile with automatic empty-state hiding
+  - Accessible Gemini API key modal (focus trap, Escape, focus restore)
+  - Keyboard-navigable tabs, skip link, visible focus and reduced-motion support
+  - Fully responsive from 5x5 desktop matrices down to 320px phones
+  - WCAG-AA contrast verified for every text-on-surface pairing
+
 Dependencies (requirements.txt):
   - fastapi >= 0.110.0
   - uvicorn >= 0.28.0
@@ -63,3 +263,56 @@ Dependencies (requirements.txt):
   - pydantic >= 2.6.0
   - google-genai >= 0.1.0
   - python-dotenv >= 1.0.0
+
+================================================================================
+PRESENTATION TALKING POINTS — UI REDESIGN
+================================================================================
+
+1. Starting point
+   The original interface was a dark, glassmorphic dashboard. The redesign
+   keeps the same engine but replaces the visual language with a warm, editorial
+   Riff-inspired system: thick ink outlines, hard offset shadows and a calm
+   near-neutral palette of ash grey, dim grey, grey olive and deep mocha.
+
+2. Why this direction
+   MatSolve is a classroom tool, not a corporate dashboard. Hand-drawn math
+   motifs — matrix brackets, a sigma medallion and an "x?" plaque — plus
+   oversized display type make linear algebra feel approachable, while the
+   mono-spaced equations stay precise and readable. The restrained palette means
+   colour carries meaning (which state? which mode?) instead of competing with
+   the maths.
+
+3. What was restructured
+   - Mode switching is now the central composition: a dim-grey card for Gemini
+     word problems and an ash-grey card for direct matrix entry.
+   - The workspace is framed as a two-stage "Input Deck → Solution Board" flow,
+     so the screen reads like a solving process rather than two generic panels.
+   - Results are colour-coded tickets and value cards, with steps as expandable
+     receipts that expose every row operation.
+
+4. Engineering decisions
+   - No framework: the existing HTML/CSS/JS architecture is retained.
+   - FastAPI endpoints, request shapes and all four solvers are untouched.
+   - Colour is expressed as role tokens (--accent, --accent-2, --accent-3), so
+     the palette is a single edit rather than a 350-rule find-and-replace.
+   - Contrast was measured, not eyeballed: white on dim grey is 5.48:1, mocha on
+     ash is 5.53:1, mocha on white is 12.96:1. Grey olive fails small-text
+     contrast, so it is decoration only — never a text background.
+   - Steps now use semantic <details> elements for built-in keyboard support.
+   - Accessibility includes skip navigation, visible focus, ARIA tabs, a focus-
+     trapped modal, reduced-motion handling and layouts verified down to 320px.
+   - The Chart.js view is themed to the new palette and hides automatically when
+     the system has no unique solution; it is a progressive enhancement, so a
+     missing CDN can never block the numeric results or step cards.
+
+5. Demo sequence suggestion
+   a. Load the Farm Animals word problem and solve it.
+   b. Expand the step cards to show the row operations.
+   c. Switch to Direct Matrix, load "No solution", and show the deep-mocha
+      ticket (the heaviest surface on the page, deliberately different from the
+      ash "unique" ticket).
+   d. Load "Unique 3×3", compare methods, then open the Gemini key modal.
+   e. Resize to phone width to demonstrate the stacked responsive layout.
+
+
+

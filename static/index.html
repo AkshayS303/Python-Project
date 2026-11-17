@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MatSolve — Universal Linear Equation & Word Problem Solver</title>
-  <meta name="description" content="State-of-the-art interactive Linear Equation and Word Problem solver powered by Gemini AI and deterministic Linear Algebra." />
-  
+  <title>MatSolve — Universal Linear Equation &amp; Word Problem Solver</title>
+  <meta name="description" content="MatSolve turns word problems and raw matrices into solved linear systems with every step exposed. Powered by Gemini AI and a deterministic linear algebra engine." />
+  <meta name="theme-color" content="#CCDAD1" />
+
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  
+
   <!-- Chart.js for Visualizations -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -21,121 +22,239 @@
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-  <!-- Ambient background glow elements -->
-  <div class="bg-glow glow-1"></div>
-  <div class="bg-glow glow-2"></div>
-  <div class="bg-glow glow-3"></div>
+  <a class="skip-link" href="#main">Skip to the solver</a>
+
+  <!-- Decorative math doodles (never interactive, never over content) -->
+  <div class="doodle-layer" aria-hidden="true">
+    <span class="doodle doodle-sigma">∑</span>
+    <span class="doodle doodle-root">√</span>
+    <span class="doodle doodle-pi">π</span>
+    <span class="doodle doodle-infinity">∞</span>
+    <span class="doodle doodle-plus">+</span>
+    <span class="doodle doodle-cross">×</span>
+  </div>
 
   <header class="app-header">
     <div class="header-container">
-      <div class="brand">
-        <div class="brand-icon">
-          <i class="fa-solid fa-shapes"></i>
-        </div>
-        <div class="brand-text">
-          <h1>Mat<span class="gradient-text">Solve</span></h1>
-          <p class="tagline">Universal Real-World Word Problem & Linear System Solver</p>
-        </div>
-      </div>
-      <div class="header-actions">
-        <button id="btn-api-key" class="btn-secondary" title="Configure Gemini API Key">
-          <i class="fa-solid fa-key"></i>
-          <span>API Key</span>
+      <a class="brand" href="/" aria-label="MatSolve home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 32" focusable="false">
+            <!-- Matrix brackets with a 2x2 coefficient block -->
+            <g fill="none" stroke="#38302E" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 5 H5 V27 H10" />
+              <path d="M38 5 H43 V27 H38" />
+            </g>
+            <g fill="#38302E">
+              <rect x="15" y="9" width="8" height="6" rx="1.6" />
+              <rect x="26" y="9" width="8" height="6" rx="1.6" />
+              <rect x="15" y="18" width="8" height="6" rx="1.6" />
+              <rect x="26" y="18" width="8" height="6" rx="1.6" />
+            </g>
+          </svg>
+        </span>
+        <span class="brand-text">
+          <span class="brand-name">Mat<span class="brand-accent">Solve</span></span>
+          <span class="brand-tag">math, but make it playful</span>
+        </span>
+      </a>
+
+      <nav class="header-actions" aria-label="App actions">
+        <button id="btn-api-key" class="btn btn-key" title="Configure your Gemini API key" aria-label="Configure Gemini API key">
+          <i class="fa-solid fa-key" aria-hidden="true"></i>
+          <span>Gemini key</span>
+          <span class="key-dot" aria-hidden="true"></span>
         </button>
-        <a href="#how-it-works" class="btn-ghost" id="btn-info">
-          <i class="fa-regular fa-circle-question"></i>
-          <span>Guide</span>
+        <a href="#how-it-works" class="btn btn-guide" id="btn-info" aria-label="How it works">
+          <i class="fa-regular fa-circle-question" aria-hidden="true"></i>
+          <span>How it works</span>
         </a>
-      </div>
+      </nav>
     </div>
   </header>
 
-  <main class="main-container">
-    <!-- Mode Switcher Tabs -->
-    <section class="mode-selector-section">
-      <div class="segmented-control" role="tablist">
-        <button class="segment-btn active" id="tab-word-problem" role="tab" aria-selected="true">
-          <i class="fa-solid fa-wand-magic-sparkles"></i>
-          <span>AI Word Problem Solver</span>
-          <span class="badge-ai">Gemini AI</span>
+  <main class="main-container" id="main" tabindex="-1">
+    <!-- ================= HERO ================= -->
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">
+          <span class="eyebrow-dot" aria-hidden="true"></span>
+          linear systems · word problems · zero drama
+        </p>
+        <h1 class="hero-title">
+          Solve<br />
+          the <span class="highlight">system.</span>
+        </h1>
+        <p class="hero-sub">
+          MatSolve reads your story problem with Gemini, builds the matrix, then shows
+          every swap, pivot and back-substitution. Or skip the story and type the matrix yourself.
+        </p>
+        <ul class="hero-facts" aria-label="Capabilities">
+          <li><span aria-hidden="true">∑</span> 4 solver methods</li>
+          <li><span aria-hidden="true">◉</span> step-by-step output</li>
+          <li><span aria-hidden="true">⚡</span> offline fallback</li>
+        </ul>
+      </div>
+
+      <div class="hero-art" aria-hidden="true">
+        <div class="art-card art-primary">
+          <div class="speech">psst… got<br />equations?</div>
+          <span class="art-code">A · X = B</span>
+          <svg class="squiggle" viewBox="0 0 400 150" fill="none" focusable="false">
+            <path d="M10 104 C 44 22, 82 22, 116 104 S 188 186 222 104 S 294 22 328 104 S 388 168 394 104"
+                  stroke="#38302E" stroke-width="30" stroke-linecap="round" transform="translate(9 9)" />
+            <path d="M10 104 C 44 22, 82 22, 116 104 S 188 186 222 104 S 294 22 328 104 S 388 168 394 104"
+                  stroke="#CCDAD1" stroke-width="26" stroke-linecap="round" />
+          </svg>
+          <div class="art-math">
+            <svg viewBox="0 0 90 90" focusable="false">
+              <!-- Sigma medallion -->
+              <circle cx="45" cy="45" r="33" fill="#FFFFFF" stroke="#38302E" stroke-width="4" />
+              <path d="M30 26 H60 L46 45 L60 64 H30"
+                    fill="none" stroke="#38302E" stroke-width="5"
+                    stroke-linejoin="round" stroke-linecap="round" />
+            </svg>
+          </div>
+        </div>
+
+        <div class="art-card art-secondary">
+          <span class="art-symbol">∑</span>
+          <div class="art-math art-math-sm">
+            <svg viewBox="0 0 80 60" focusable="false">
+              <!-- Matrix bracket with a 2x2 block grid -->
+              <g fill="none" stroke="#38302E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 7 H7 V53 H15" />
+                <path d="M65 7 H73 V53 H65" />
+              </g>
+              <g fill="#38302E">
+                <rect x="22" y="15" width="13" height="10" rx="2.2" />
+                <rect x="43" y="15" width="13" height="10" rx="2.2" />
+                <rect x="22" y="35" width="13" height="10" rx="2.2" />
+                <rect x="43" y="35" width="13" height="10" rx="2.2" />
+              </g>
+            </svg>
+          </div>
+          <span class="art-label">gaussian · cramer · inverse</span>
+        </div>
+
+        <div class="art-card art-tertiary">
+          <span class="art-big">4</span>
+          <span class="art-label">solver<br />methods</span>
+        </div>
+
+        <span class="spark spark-b">✦</span>
+        <span class="spark spark-c">✦</span>
+      </div>
+    </section>
+
+    <!-- ================= MODE SELECTOR ================= -->
+    <section class="mode-selector-section" aria-label="Input mode">
+      <div class="segmented-control" role="tablist" aria-label="Choose your input mode">
+        <button class="segment-btn active" id="tab-word-problem" role="tab"
+                aria-selected="true" aria-controls="panel-word-problem" tabindex="0">
+          <span class="segment-icon" aria-hidden="true"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+          <span class="segment-text">
+            <span class="segment-title">Word problem</span>
+            <span class="segment-desc">Describe it. Gemini builds the matrix.</span>
+          </span>
+          <span class="segment-badge badge-ai">Gemini AI</span>
+          <span class="segment-sticker" aria-hidden="true">ON</span>
         </button>
-        <button class="segment-btn" id="tab-direct-matrix" role="tab" aria-selected="false">
-          <i class="fa-solid fa-table-cells"></i>
-          <span>Direct Matrix & Equations</span>
-          <span class="badge-math">Deterministic</span>
+
+        <button class="segment-btn" id="tab-direct-matrix" role="tab"
+                aria-selected="false" aria-controls="panel-direct-matrix" tabindex="-1">
+          <span class="segment-icon" aria-hidden="true"><i class="fa-solid fa-table-cells"></i></span>
+          <span class="segment-text">
+            <span class="segment-title">Direct matrix</span>
+            <span class="segment-desc">Type the coefficients. Keep it exact.</span>
+          </span>
+          <span class="segment-badge badge-math">Exact</span>
+          <span class="segment-sticker" aria-hidden="true">ON</span>
         </button>
       </div>
     </section>
 
-    <!-- Main Workspace Layout -->
+    <!-- ================= WORKSPACE ================= -->
     <div class="workspace-grid">
-      <!-- Input Panel -->
-      <section class="card input-card glass-panel">
+      <!-- INPUT CARD -->
+      <section class="card input-card" aria-labelledby="input-heading">
+        <div class="panel-topline">
+          <span class="panel-index" aria-hidden="true">01</span>
+          <span class="panel-kicker">Input deck</span>
+          <span class="panel-rule" aria-hidden="true"></span>
+        </div>
+        <h2 class="panel-title" id="input-heading">What are we solving?</h2>
+
         <!-- MODE 1: AI Word Problem Input -->
-        <div id="panel-word-problem" class="mode-panel active">
-          <div class="panel-header">
-            <div>
-              <h2>Describe Your Real-World Problem</h2>
-              <p class="panel-desc">Paste any story, business constraint, or word problem. Gemini AI extracts variables, formulates equations, and constructs the linear system.</p>
-            </div>
-          </div>
+        <div id="panel-word-problem" class="mode-panel active" role="tabpanel" aria-labelledby="tab-word-problem">
+          <p class="panel-desc">
+            Paste any story, business constraint or word problem. Gemini extracts the variables
+            and equations; the math itself always runs on the deterministic engine.
+          </p>
 
           <div class="preset-chips">
-            <span class="chips-label"><i class="fa-solid fa-bolt"></i> Try Samples:</span>
-            <button class="chip" data-preset="animals">🐓 Farm Animals</button>
-            <button class="chip" data-preset="portfolio">📈 Investment Return</button>
-            <button class="chip" data-preset="bakery">🥐 Bakery Production</button>
-            <button class="chip" data-preset="mixture">🧪 Chemistry Mixture</button>
+            <span class="chips-label"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Try a sample</span>
+            <button class="chip" data-preset="animals" type="button">🐓 Farm animals</button>
+            <button class="chip" data-preset="portfolio" type="button">📈 Investment return</button>
+            <button class="chip" data-preset="bakery" type="button">🥐 Bakery production</button>
+            <button class="chip" data-preset="mixture" type="button">🧪 Chemistry mixture</button>
           </div>
 
           <div class="form-group">
-            <textarea 
-              id="word-problem-input" 
-              class="custom-textarea" 
-              rows="5" 
-              placeholder="e.g. A store sells regular coffees for $3 and deluxe lattes for $5. On Monday, they sold 70 drinks in total and made $290. How many of each drink did they sell?"
-            ></textarea>
+            <label class="sr-only" for="word-problem-input">Describe your word problem</label>
+            <div class="textarea-shell">
+              <textarea
+                id="word-problem-input"
+                class="custom-textarea"
+                rows="5"
+                placeholder="e.g. A store sells regular coffees for $3 and deluxe lattes for $5. On Monday, they sold 70 drinks in total and made $290. How many of each drink did they sell?"
+              ></textarea>
+              <span class="textarea-tag" aria-hidden="true">natural language → matrix</span>
+            </div>
           </div>
         </div>
 
         <!-- MODE 2: Direct Matrix Input -->
-        <div id="panel-direct-matrix" class="mode-panel">
+        <div id="panel-direct-matrix" class="mode-panel" role="tabpanel" aria-labelledby="tab-direct-matrix">
           <div class="panel-header">
             <div>
-              <h2>Direct Matrix Configuration</h2>
-              <p class="panel-desc">Set system dimensions and enter coefficients directly into augmented matrix $[A \mid B]$.</p>
+              <p class="panel-desc">
+                Enter coefficients directly into the augmented matrix
+                <span class="math-inline">[A&nbsp;|&nbsp;B]</span> and watch the equations build themselves.
+              </p>
             </div>
             <div class="dimension-picker">
-              <label for="matrix-size-select">Variables ($n$):</label>
-              <select id="matrix-size-select" class="custom-select">
-                <option value="2">2 × 2 System</option>
-                <option value="3" selected>3 × 3 System</option>
-                <option value="4">4 × 4 System</option>
-                <option value="5">5 × 5 System</option>
-              </select>
+              <label for="matrix-size-select">System</label>
+              <div class="select-shell select-shell-sm">
+                <select id="matrix-size-select" class="custom-select">
+                  <option value="2">2 × 2</option>
+                  <option value="3" selected>3 × 3</option>
+                  <option value="4">4 × 4</option>
+                  <option value="5">5 × 5</option>
+                </select>
+              </div>
             </div>
           </div>
 
           <div class="preset-chips">
-            <span class="chips-label"><i class="fa-solid fa-bolt"></i> Matrix Presets:</span>
-            <button class="chip" data-matrix-preset="unique3">Unique 3x3</button>
-            <button class="chip" data-matrix-preset="inconsistent">Inconsistent (No Sol)</button>
-            <button class="chip" data-matrix-preset="infinite">Infinite Solutions</button>
-            <button class="chip" data-matrix-preset="identity">Identity 3x3</button>
+            <span class="chips-label"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Matrix presets</span>
+            <button class="chip" data-matrix-preset="unique3" type="button">Unique 3×3</button>
+            <button class="chip" data-matrix-preset="inconsistent" type="button">No solution</button>
+            <button class="chip" data-matrix-preset="infinite" type="button">Infinite</button>
+            <button class="chip" data-matrix-preset="identity" type="button">Identity</button>
           </div>
 
           <!-- Dynamic Matrix Grid Container -->
           <div class="matrix-input-wrapper">
-            <div class="matrix-bracket-left"></div>
-            <div id="matrix-grid-container" class="matrix-grid">
+            <div class="matrix-bracket-left" aria-hidden="true"></div>
+            <div id="matrix-grid-container" class="matrix-grid" role="group" aria-label="Augmented matrix coefficients">
               <!-- Dynamically generated inputs -->
             </div>
-            <div class="matrix-bracket-right"></div>
+            <div class="matrix-bracket-right" aria-hidden="true"></div>
           </div>
 
           <!-- Live Equation Preview -->
           <div class="equation-preview-box">
-            <div class="preview-title"><i class="fa-solid fa-code"></i> Live Formulated Equations:</div>
+            <div class="preview-title"><i class="fa-solid fa-code" aria-hidden="true"></i> Live equations</div>
             <div id="live-equations" class="live-equations-list">
               <!-- Generated preview -->
             </div>
@@ -145,41 +264,83 @@
         <!-- Method Selection & Solve Action -->
         <div class="solver-controls">
           <div class="method-selector-group">
-            <label for="solver-method-select"><i class="fa-solid fa-gears"></i> Solution Method:</label>
-            <select id="solver-method-select" class="custom-select primary-select">
-              <option value="gaussian">Gaussian Elimination (REF + Back-Substitution)</option>
-              <option value="gauss_jordan">Gauss-Jordan Elimination (RREF)</option>
-              <option value="cramer">Cramer's Rule (Determinants)</option>
-              <option value="inversion">Matrix Inversion (X = A⁻¹B)</option>
-            </select>
+            <label for="solver-method-select"><i class="fa-solid fa-gears" aria-hidden="true"></i> Solution method</label>
+            <div class="select-shell">
+              <select id="solver-method-select" class="custom-select primary-select">
+                <option value="gaussian">Gaussian elimination — REF + back-substitution</option>
+                <option value="gauss_jordan">Gauss-Jordan — reduced row echelon form</option>
+                <option value="cramer">Cramer's rule — determinants</option>
+                <option value="inversion">Matrix inversion — X = A⁻¹B</option>
+              </select>
+            </div>
           </div>
 
-          <button id="btn-solve" class="btn-primary solve-btn">
-            <i class="fa-solid fa-calculator"></i>
+          <button id="btn-solve" class="btn-solve" type="button">
+            <i class="fa-solid fa-equals" aria-hidden="true"></i>
             <span>Calculate Solution</span>
-            <div class="btn-spinner hidden" id="solve-spinner"></div>
+            <div class="btn-spinner hidden" id="solve-spinner" aria-hidden="true"></div>
           </button>
         </div>
       </section>
 
-      <!-- Output / Results Panel -->
-      <section class="card output-card glass-panel" id="results-section">
+      <!-- OUTPUT / RESULTS CARD -->
+      <section class="card output-card" id="results-section" aria-labelledby="results-heading">
+        <div class="panel-topline">
+          <span class="panel-index" aria-hidden="true">02</span>
+          <span class="panel-kicker">Solution board</span>
+          <span class="panel-rule" aria-hidden="true"></span>
+          <span class="live-badge"><span class="live-dot" aria-hidden="true"></span> live</span>
+        </div>
+        <h2 class="panel-title" id="results-heading">The answer, with receipts.</h2>
+
         <!-- Initial Blank State -->
         <div class="empty-state" id="empty-state-view">
-          <div class="empty-icon">
-            <i class="fa-solid fa-calculator-simple"></i>
+          <div class="empty-art" aria-hidden="true">
+            <svg viewBox="0 0 240 150" focusable="false">
+              <g fill="none" stroke="#38302E" stroke-width="5" stroke-linecap="round">
+                <path d="M30 26 v100" />
+                <path d="M18 26 h12" />
+                <path d="M18 126 h12" />
+                <path d="M146 26 v100" />
+                <path d="M146 26 h12" />
+                <path d="M146 126 h12" />
+              </g>
+              <g stroke="#38302E" stroke-width="4">
+                <rect x="44" y="42" width="42" height="28" rx="8" fill="#6F6866" />
+                <rect x="94" y="42" width="42" height="28" rx="8" fill="#9CAEA9" />
+                <rect x="44" y="80" width="42" height="28" rx="8" fill="#CCDAD1" />
+                <rect x="94" y="80" width="42" height="28" rx="8" fill="#FFFFFF" />
+              </g>
+              <!-- x = ? : the unknown still waiting to be solved -->
+              <g transform="translate(166 34)">
+                <rect x="0" y="0" width="58" height="76" rx="14" fill="#FFFFFF" stroke="#38302E" stroke-width="3.4" />
+                <g stroke="#38302E" stroke-width="4.4" stroke-linecap="round">
+                  <path d="M14 28 L26 50" />
+                  <path d="M26 28 L14 50" />
+                </g>
+                <path d="M32 34 c0-4.6 3.4-7.4 7.2-7.4 4.2 0 7 2.7 7 6.2 0 5.2-7 5.2-7 10.2"
+                      fill="none" stroke="#38302E" stroke-width="3.4" stroke-linecap="round" />
+                <circle cx="39.4" cy="49" r="2.4" fill="#38302E" />
+              </g>
+              <path d="M122 6 l4 9 9 4 -9 4 -4 9 -4 -9 -9 -4 9 -4 z" fill="#CCDAD1" stroke="#38302E" stroke-width="2.6" />
+            </svg>
           </div>
-          <h3>Ready to Solve</h3>
-          <p>Select a method and click <strong>Calculate Solution</strong> to view matrix operations, rank analysis, and variable allocations.</p>
+          <h3>Nothing solved yet</h3>
+          <p>Pick a method and hit <strong>Calculate Solution</strong>. Your ranks, values and every row operation will land right here.</p>
+          <div class="empty-chips" aria-hidden="true">
+            <span>rank(A)</span>
+            <span>steps</span>
+            <span>chart</span>
+          </div>
         </div>
 
         <!-- Populated Results View (hidden by default) -->
         <div class="results-content hidden" id="results-content-view">
           <!-- Status Banner & Solvability Metrics -->
-          <div class="status-banner" id="status-banner">
+          <div class="status-banner" id="status-banner" aria-live="polite">
             <div class="status-header">
               <div class="status-badge" id="status-badge">
-                <i class="fa-solid fa-circle-check"></i>
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
                 <span id="status-title">Unique Solution Found</span>
               </div>
               <div class="system-ranks">
@@ -193,12 +354,12 @@
 
           <!-- AI Breakdown (Visible when solving word problems) -->
           <div class="ai-breakdown-card hidden" id="ai-breakdown-container">
-            <div class="card-subtitle" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-brain"></i>
-                <span>AI Semantic Formulation Breakdown</span>
-              </div>
-              <span id="ai-source-badge" class="badge-math" style="font-size: 0.72rem; text-transform: none; display: flex; align-items: center; gap: 5px;">⚡ High Availability</span>
+            <div class="card-subtitle">
+              <span class="card-subtitle-label">
+                <i class="fa-solid fa-brain" aria-hidden="true"></i>
+                <span>AI formulation breakdown</span>
+              </span>
+              <span id="ai-source-badge" class="badge-math">⚡ High Availability</span>
             </div>
             <div class="variables-tags" id="ai-variable-tags"></div>
             <ul class="equations-explanation-list" id="ai-explanation-list"></ul>
@@ -207,9 +368,9 @@
           <!-- Solved Values Cards -->
           <div class="solutions-overview">
             <div class="section-headline">
-              <h3><i class="fa-solid fa-square-root-variable"></i> Resolved Values</h3>
-              <button class="btn-tiny" id="btn-copy-solutions" title="Copy Values">
-                <i class="fa-regular fa-copy"></i> Copy
+              <h3><i class="fa-solid fa-square-root-variable" aria-hidden="true"></i> Resolved values</h3>
+              <button class="btn-tiny" id="btn-copy-solutions" type="button" title="Copy values">
+                <i class="fa-regular fa-copy" aria-hidden="true"></i> Copy
               </button>
             </div>
             <div class="variables-grid" id="solved-variables-grid">
@@ -220,17 +381,17 @@
           <!-- Visual Bar Chart Distribution -->
           <div class="chart-container-card">
             <div class="section-headline">
-              <h3><i class="fa-solid fa-chart-column"></i> Variable Allocation Profile</h3>
+              <h3><i class="fa-solid fa-chart-column" aria-hidden="true"></i> Value profile</h3>
             </div>
             <div class="chart-wrapper">
-              <canvas id="solutionChart"></canvas>
+              <canvas id="solutionChart" role="img" aria-label="Bar chart of solved variable values"></canvas>
             </div>
           </div>
 
           <!-- Step-by-Step Row Operations Accordion -->
           <div class="steps-section">
             <div class="section-headline">
-              <h3><i class="fa-solid fa-list-check"></i> Step-by-Step Matrix Operations</h3>
+              <h3><i class="fa-solid fa-list-check" aria-hidden="true"></i> Step-by-step operations</h3>
               <span class="step-count-badge" id="step-count">0 Steps</span>
             </div>
             <div class="steps-timeline" id="steps-timeline">
@@ -240,34 +401,102 @@
         </div>
       </section>
     </div>
+
+    <!-- ================= HOW IT WORKS ================= -->
+    <section class="guide-section" id="how-it-works" aria-labelledby="guide-heading">
+      <div class="guide-head">
+        <div>
+          <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> under the hood</p>
+          <h2 class="guide-title" id="guide-heading">Four ways to crack a system.</h2>
+        </div>
+        <p class="guide-sub">
+          Pick your method. MatSolve runs the exact same deterministic engine every time —
+          Gemini only handles the translation from words to equations.
+        </p>
+      </div>
+
+      <div class="method-grid">
+        <article class="method-card method-primary">
+          <span class="method-num" aria-hidden="true">01</span>
+          <h3>Gaussian elimination</h3>
+          <p class="method-formula">AX = B → REF</p>
+          <p>Forward elimination with partial pivoting, then back-substitution to pull out each variable.</p>
+        </article>
+        <article class="method-card method-secondary">
+          <span class="method-num" aria-hidden="true">02</span>
+          <h3>Gauss-Jordan</h3>
+          <p class="method-formula">AX = B → RREF</p>
+          <p>Pivots are normalised to 1 and eliminated in both directions, so the answer sits in the last column.</p>
+        </article>
+        <article class="method-card method-tertiary">
+          <span class="method-num" aria-hidden="true">03</span>
+          <h3>Cramer's rule</h3>
+          <p class="method-formula">xᵢ = det(Aᵢ) / det(A)</p>
+          <p>Swaps the constant vector into each column and solves with determinants. Square systems only.</p>
+        </article>
+        <article class="method-card method-paper">
+          <span class="method-num" aria-hidden="true">04</span>
+          <h3>Matrix inversion</h3>
+          <p class="method-formula">X = A⁻¹B</p>
+          <p>Checks det(A), builds the inverse and multiplies. Fast when the coefficient matrix is well behaved.</p>
+        </article>
+      </div>
+
+      <div class="engine-note">
+        <span class="engine-note-icon" aria-hidden="true"><i class="fa-solid fa-bolt"></i></span>
+        <p>
+          <strong>Never offline-blocked.</strong> Word problems use Gemini with a cached/offline parser fallback,
+          and direct matrices solve in-browser if the API is unreachable.
+        </p>
+        <a href="#main" class="btn-tiny engine-note-link">Back to solver</a>
+      </div>
+    </section>
   </main>
 
+  <footer class="app-footer">
+    <div class="footer-inner">
+      <span class="footer-brand">
+        <svg viewBox="0 0 60 60" aria-hidden="true" focusable="false">
+          <circle cx="30" cy="30" r="23" fill="#9CAEA9" stroke="#38302E" stroke-width="4" />
+          <path d="M20 16 H40 L30 30 L40 44 H20"
+                fill="none" stroke="#38302E" stroke-width="4.4"
+                stroke-linejoin="round" stroke-linecap="round" />
+        </svg>
+        MatSolve
+      </span>
+      <span class="footer-note">Built for math class · deterministic linear algebra · Gemini-assisted parsing</span>
+      <a href="#how-it-works" class="footer-link">Methods ↗</a>
+    </div>
+  </footer>
+
   <!-- API Key Modal -->
-  <div class="modal-overlay hidden" id="api-key-modal">
-    <div class="modal-card glass-panel">
+  <div class="modal-overlay hidden" id="api-key-modal" role="dialog" aria-modal="true" aria-labelledby="api-modal-title">
+    <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title">
-          <i class="fa-solid fa-key"></i>
-          <h3>Gemini API Configuration</h3>
+          <span class="modal-icon" aria-hidden="true"><i class="fa-solid fa-key"></i></span>
+          <h3 id="api-modal-title">Gemini API configuration</h3>
         </div>
-        <button class="btn-close" id="btn-close-modal">&times;</button>
+        <button class="btn-close" id="btn-close-modal" type="button" aria-label="Close API key dialog">&times;</button>
       </div>
       <div class="modal-body">
-        <p>A default key is pre-configured on the backend, or you can provide your own Gemini API Key for parsing word problems:</p>
-        <div class="form-group">
-          <input type="password" id="custom-api-key-input" class="custom-input" placeholder="AIzaSy..." />
-        </div>
+        <p class="modal-copy">
+          A default key is pre-configured on the backend. Add your own Gemini API key below and
+          MatSolve will use it for word-problem parsing.
+        </p>
+        <label class="modal-label" for="custom-api-key-input">Your key</label>
+        <input type="password" id="custom-api-key-input" class="custom-input" placeholder="AIzaSy..." autocomplete="off" spellcheck="false" />
         <div class="api-key-actions">
-          <button class="btn-primary" id="btn-save-api-key">Save Key</button>
-          <button class="btn-secondary" id="btn-clear-api-key">Reset to Default</button>
+          <button class="btn-save-key" id="btn-save-api-key" type="button">Save key</button>
+          <button class="btn-reset-key" id="btn-clear-api-key" type="button">Reset to default</button>
         </div>
-        <p class="modal-footer-note"><i class="fa-solid fa-shield-halved"></i> Your key is saved locally in your browser storage.</p>
+        <p class="modal-footer-note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Stored locally in this browser only.</p>
       </div>
     </div>
   </div>
 
   <!-- Notification Toast -->
-  <div class="toast hidden" id="app-toast"></div>
+  <div class="toast hidden" id="app-toast" role="status" aria-live="polite"></div>
 
   <!-- Scripts -->
   <script src="/static/app.js"></script>
