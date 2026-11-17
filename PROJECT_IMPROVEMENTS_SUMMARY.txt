@@ -5,6 +5,38 @@
 UPDATE LOG
 ================================================================================
 
+[2026-11-17] – Project README Added
+-----------------------------------------------------------------------
+CHANGE: Added README.md as the single entry point for the repository. It
+        documents the product, setup and the internals that previously only
+        lived in code or in this summary.
+
+CONTENTS:
+  - Feature list covering both input modes, all five solvers, the Jacobi
+    analytics panel and the offline fallbacks.
+  - Quick start for Windows (run.bat) and manual install (pip + python
+    server.py), plus the requirements table and dependency list.
+  - Configuration: GEMINI_API_KEY and PORT via .env, and the runtime key
+    modal (localStorage + per-request api_key) that overrides it.
+  - Usage walkthroughs for word-problem and direct-matrix modes, and a
+    table of what the results view renders.
+  - Preset tables (four word problems, five matrices) with their actual
+    coefficients and expected behaviour.
+  - Solver comparison table (method id, idea, requirement), the Jacobi
+    iteration formula, convergence condition and the full response fields.
+  - API reference for POST /api/solve/matrix, POST /api/solve/word-problem,
+    GET /api/health and GET /, including request defaults, status strings
+    and error codes.
+  - Project structure map, resilience chain (cache -> offline parser ->
+    presets -> six-model Gemini cascade -> REST fallback -> in-browser
+    solver), accessibility/design notes, troubleshooting table and pointers
+    to this summary and test_sanitizer.py.
+
+NOTES:
+  - Markdown only; no runtime, dependency, endpoint or UI change.
+  - Verified against the current code: route paths, request field names,
+    preset coefficients, status strings and health payload all match.
+
 [2026-11-17] – Merge: Jacobi Branch Integrated Into the Monochrome UI
 -----------------------------------------------------------------------
 CHANGE: Merged origin/main (61ab8c5 "jacobi" — iterative solver, convergence
