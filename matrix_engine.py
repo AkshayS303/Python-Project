@@ -506,6 +506,20 @@ def solve_jacobi_iteration(
         )
         
         if is_diverging:
+            sub_history = history[:k+2]
+            val_curve_diverged = None
+            try:
+                if abs(det_A) > tol and rank_A == m:
+                    x_true_div = np.linalg.solve(A, B).flatten()
+                    l2_errors_div = np.linalg.norm(sub_history - x_true_div, axis=1)
+                    val_curve_diverged = {
+                        "iterations": [int(i) for i in range(len(sub_history))],
+                        "x_true": [float(round_val(v, 4)) for v in x_true_div],
+                        "l2_errors": [float(round_val(err, 6)) for err in l2_errors_div]
+                    }
+            except Exception:
+                val_curve_diverged = None
+
             return {
                 "method": "Jacobi Iterative Method",
                 "status": "Diverged (Non-Diagonally Dominant)",
@@ -518,7 +532,8 @@ def solve_jacobi_iteration(
                 "dominance_details": dominance_details,
                 "solution": None,
                 "is_diverged": True,
-                "history": [[float(round_val(val)) for val in row] for row in history[:k+2]],
+                "history": [[float(round_val(val)) for val in row] for row in sub_history],
+                "validation_curve": val_curve_diverged,
                 "steps": steps
             }
             
@@ -592,6 +607,20 @@ def solve_jacobi_iteration(
         "y": [float(round_val(v)) for v in history[:, 1]] if m > 1 else [0.0] * len(history),
         "z": [float(round_val(v)) for v in history[:, 2]] if m > 2 else [0.0] * len(history),
     }
+
+    # 8. Validation Curve: L2 Error Norm ||x_k - x_true|| (Step 9)
+    validation_curve = None
+    try:
+        if abs(det_A) > tol and rank_A == m:
+            x_true = np.linalg.solve(A, B).flatten()
+            l2_errors = np.linalg.norm(history - x_true, axis=1)
+            validation_curve = {
+                "iterations": [int(i) for i in range(len(history))],
+                "x_true": [float(round_val(v, 4)) for v in x_true],
+                "l2_errors": [float(round_val(err, 6)) for err in l2_errors]
+            }
+    except Exception:
+        validation_curve = None
     
     final_solutions = [float(round_val(s)) for s in x_current]
     
@@ -616,5 +645,6 @@ def solve_jacobi_iteration(
         "statistics": statistics,
         "crossover_data": crossover_data,
         "trajectory_3d": trajectory_3d,
+        "validation_curve": validation_curve,
         "steps": steps
     }

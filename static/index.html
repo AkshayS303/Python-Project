@@ -277,13 +277,29 @@
             <div class="chart-container-card">
               <div class="section-headline">
                 <div>
-                  <h3><i class="fa-solid fa-code-compare"></i> Running Variance vs. Std Dev Crossover (Step 9)</h3>
+                  <h3><i class="fa-solid fa-code-compare"></i> Running Variance vs. Std Dev Crossover</h3>
                   <p class="chart-subtext">Detects dynamic intersection points where running standard deviation σ equals running variance σ².</p>
                 </div>
               </div>
               <div class="crossover-badges" id="crossover-badges-list"></div>
               <div class="chart-wrapper" style="height: 280px;">
                 <canvas id="jacobiCrossoverChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Validation Curve: L2 Error Norm Convergence (Step 9 from validation curve.pdf) -->
+            <div class="chart-container-card" id="jacobi-validation-card">
+              <div class="section-headline">
+                <div>
+                  <h3><i class="fa-solid fa-chart-line"></i> Validation Curve (Convergence Error Norm — Step 9)</h3>
+                  <p class="chart-subtext">True L2 Error Norm ||x_k - x_true|| plotted across iteration index k on a logarithmic scale.</p>
+                </div>
+                <span class="badge-math" id="validation-error-badge" style="font-size: 0.72rem; background: rgba(111, 66, 193, 0.2); color: #d8b4fe; border-color: rgba(111, 66, 193, 0.45);">
+                  <i class="fa-solid fa-square-root-variable"></i> L2 Error Norm
+                </span>
+              </div>
+              <div class="chart-wrapper" style="height: 280px;">
+                <canvas id="jacobiValidationChart"></canvas>
               </div>
             </div>
 

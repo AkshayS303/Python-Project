@@ -13,6 +13,7 @@ const state = {
   chartInstance: null,
   jacobiTrajectoryChartInstance: null,
   jacobiCrossoverChartInstance: null,
+  jacobiValidationChartInstance: null,
   apiKey: localStorage.getItem('matsolve_gemini_api_key') || localStorage.getItem('matrixai_gemini_api_key') || ''
 };
 
@@ -106,6 +107,9 @@ const elements = {
   crossoverBadgesList: document.getElementById('crossover-badges-list'),
   iterationTableHead: document.getElementById('iteration-table-head'),
   iterationTableBody: document.getElementById('iteration-table-body'),
+  jacobiValidationChart: document.getElementById('jacobiValidationChart'),
+  jacobiValidationCard: document.getElementById('jacobi-validation-card'),
+  validationErrorBadge: document.getElementById('validation-error-badge'),
 
   // Modal & Toast
   btnApiKey: document.getElementById('btn-api-key'),
@@ -621,6 +625,26 @@ function runClientSideJacobi(Ain, Bin, maxIter = 15) {
     const maxB = Math.max(...Bin.map(Math.abs), 1.0);
     const currNorm = Math.max(...xNext.map(Math.abs));
     if (divergenceStreak >= 3 || (k >= 2 && !isDominant && currNorm > maxB * 3)) {
+      let valCurveDiv = null;
+      try {
+        const gaussRes = runClientSideGaussian(Ain, Bin, 'gaussian');
+        if (gaussRes && gaussRes.solution) {
+          const xTrue = gaussRes.solution;
+          const l2Errors = history.map(row => {
+            let sumSq = 0;
+            for (let i = 0; i < n; i++) sumSq += Math.pow(row[i] - xTrue[i], 2);
+            return Math.round(Math.sqrt(sumSq) * 1000000) / 1000000;
+          });
+          valCurveDiv = {
+            iterations: history.map((_, idx) => idx),
+            x_true: xTrue,
+            l2_errors: l2Errors
+          };
+        }
+      } catch (e) {
+        valCurveDiv = null;
+      }
+
       return {
         method: "Jacobi Iterative Method",
         status: "Diverged (Non-Diagonally Dominant)",
@@ -633,6 +657,7 @@ function runClientSideJacobi(Ain, Bin, maxIter = 15) {
         dominance_details: dominanceDetails,
         solution: null,
         history: history,
+        validation_curve: valCurveDiv,
         steps: steps
       };
     }
@@ -697,6 +722,27 @@ function runClientSideJacobi(Ain, Bin, maxIter = 15) {
     }
   }
 
+  // validation curve (L2 error norm ||x_k - x_true||)
+  let validationCurve = null;
+  try {
+    const gaussRes = runClientSideGaussian(Ain, Bin, 'gaussian');
+    if (gaussRes && gaussRes.solution) {
+      const xTrue = gaussRes.solution;
+      const l2Errors = history.map(row => {
+        let sumSq = 0;
+        for (let i = 0; i < n; i++) sumSq += Math.pow(row[i] - xTrue[i], 2);
+        return Math.round(Math.sqrt(sumSq) * 1000000) / 1000000;
+      });
+      validationCurve = {
+        iterations: history.map((_, idx) => idx),
+        x_true: xTrue,
+        l2_errors: l2Errors
+      };
+    }
+  } catch (e) {
+    validationCurve = null;
+  }
+
   return {
     method: "Jacobi Iterative Method",
     status: "Unique Solution (Jacobi Completed)",
@@ -712,6 +758,7 @@ function runClientSideJacobi(Ain, Bin, maxIter = 15) {
     history: history.map(h => h.map(v => Math.round(v * 10000) / 10000)),
     statistics: statistics,
     crossover_data: crossoverData,
+    validation_curve: validationCurve,
     steps: steps
   };
 }
@@ -899,6 +946,10 @@ function renderResults(res) {
     if (state.jacobiCrossoverChartInstance) {
       state.jacobiCrossoverChartInstance.destroy();
       state.jacobiCrossoverChartInstance = null;
+    }
+    if (state.jacobiValidationChartInstance) {
+      state.jacobiValidationChartInstance.destroy();
+      state.jacobiValidationChartInstance = null;
     }
   }
 }
@@ -1099,7 +1150,10 @@ function renderJacobiAnalytics(res) {
   // 4. Running Variance vs. Std Dev Crossover Chart (Step 9 from project1.pdf)
   renderJacobiCrossoverChart(res);
 
-  // 5. Iteration History Table
+  // 5. Validation Curve: L2 Error Norm Logarithmic Chart (Step 9 from validation curve.pdf)
+  renderJacobiValidationChart(res);
+
+  // 6. Iteration History Table
   renderIterationHistoryTable(res);
 }
 
@@ -1251,6 +1305,96 @@ function renderJacobiCrossoverChart(res) {
         y: {
           grid: { color: 'rgba(255, 255, 255, 0.05)' },
           ticks: { color: '#9ca3af', font: { family: 'Fira Code' } }
+        }
+      }
+    }
+  });
+}
+
+function renderJacobiValidationChart(res) {
+  if (state.jacobiValidationChartInstance) {
+    state.jacobiValidationChartInstance.destroy();
+    state.jacobiValidationChartInstance = null;
+  }
+
+  if (!elements.jacobiValidationChart) return;
+
+  if (!res.validation_curve || !res.validation_curve.l2_errors || !res.validation_curve.l2_errors.length) {
+    if (elements.jacobiValidationCard) elements.jacobiValidationCard.classList.add('hidden');
+    return;
+  }
+
+  if (elements.jacobiValidationCard) elements.jacobiValidationCard.classList.remove('hidden');
+
+  const vCurve = res.validation_curve;
+  const labels = vCurve.iterations.map(i => i === 0 ? 'k=0 (Initial)' : `k=${i}`);
+  
+  // Safeguard for logarithmic scale: Chart.js log scale requires values > 0.
+  // If error is 0 or extremely close to 0, clamp display value to 1e-7 for clean log plotting.
+  const chartData = vCurve.l2_errors.map(err => Math.max(err, 1e-7));
+
+  if (elements.validationErrorBadge) {
+    const finalErr = vCurve.l2_errors[vCurve.l2_errors.length - 1];
+    elements.validationErrorBadge.innerHTML = `<i class="fa-solid fa-bullseye"></i> Final L2 Error: ${finalErr < 1e-4 ? finalErr.toExponential(3) : finalErr.toFixed(5)}`;
+  }
+
+  const ctx = elements.jacobiValidationChart.getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, 0, 260);
+  gradient.addColorStop(0, 'rgba(111, 66, 193, 0.35)');
+  gradient.addColorStop(1, 'rgba(111, 66, 193, 0.02)');
+
+  state.jacobiValidationChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'L2 Error Norm ||x_k - x_true||',
+        data: chartData,
+        borderColor: '#6f42c1',
+        backgroundColor: gradient,
+        fill: true,
+        borderWidth: 2.5,
+        pointBackgroundColor: '#6f42c1',
+        pointBorderColor: '#ffffff',
+        pointRadius: chartData.length > 25 ? 2 : 5,
+        pointHoverRadius: 7,
+        tension: 0.2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#e5e7eb', font: { family: 'Inter', size: 11 } }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(17, 24, 39, 0.95)',
+          titleFont: { family: 'Outfit' },
+          bodyFont: { family: 'Fira Code' },
+          callbacks: {
+            label: function(context) {
+              const rawVal = vCurve.l2_errors[context.dataIndex];
+              return ` L2 Error ||x_${context.dataIndex} - x*||: ${rawVal}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { color: '#9ca3af', font: { family: 'Inter' } }
+        },
+        y: {
+          type: 'logarithmic',
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { 
+            color: '#c4b5fd', 
+            font: { family: 'Fira Code' },
+            callback: function(value) {
+              return Number(value).toExponential(0);
+            }
+          }
         }
       }
     }

@@ -5,6 +5,47 @@
 UPDATE LOG
 ================================================================================
 
+[2026-11-18] – Validation Curve: L2 Error Norm & Semi-Log Convergence Analytics
+--------------------------------------------------------------------------------
+CHANGE: Integrated teammate's latest algorithm update (from validation curve.pdf)
+        introducing formal error validation curves for the Jacobi Iterative Method.
+
+MATHEMATICAL & ALGORITHMIC ADDITIONS:
+  - Ground-Truth Solution Reference:
+      • Resolves exact benchmark solution vector x_true = A⁻¹B using direct linear
+        algebra (LU decomposition / np.linalg.solve).
+  - L2 Error Norm Trajectory (Step 9):
+      • Formulates the Euclidean distance error metric at each iteration step k:
+        e_k = ||x^(k) - x_true||_2 = sqrt( ∑_{i=1}^m (x_i^(k) - x_i_true)^2 )
+      • Tracks the progression of absolute error norm from initial guess (k=0) to
+        final iteration step.
+  - Semi-Logarithmic Error Decay Visualization:
+      • Interactive Chart.js line graph featuring a logarithmic Y-scale (base 10).
+      • Mathematically demonstrates exponential convergence: on a log scale, linear
+        downward slope visually confirms that error decays exponentially with respect
+        to iteration index k.
+      • If a system is non-diagonally dominant, the curve visually shoots upward,
+        providing immediate graphical proof of divergence.
+      • Displays live target accuracy pill badge with scientific exponential notation.
+
+FILES MODIFIED:
+  - matrix_engine.py
+      • Added `validation_curve` computation to `solve_jacobi_iteration` for both
+        converging solutions and early-stopped divergent runs.
+      • Formats `x_true` reference coordinates and float64 L2 errors per iteration.
+  - static/index.html
+      • Added `#jacobi-validation-card` with canvas `#jacobiValidationChart` and
+        live `#validation-error-badge`.
+  - static/app.js
+      • Added `renderJacobiValidationChart(res)` utilizing Chart.js logarithmic scale
+        with purple accent theme (`#6f42c1`) matching Matplotlib specifications.
+      • Implemented client-side offline calculation of `validation_curve` inside
+        `runClientSideJacobi` using Gaussian reference solver.
+
+ACADEMIC / PRESENTATION IMPACT:
+  - Provides the formal numerical analysis standard for proving algorithm convergence,
+    transforming the convergence dashboard into a complete academic validation tool.
+
 [2026-10-29] – High-Availability Word Problem Resilience & Serialization Fix
 --------------------------------------------------------------------------------
 CHANGE: Resolved "Failed to solve word problem" error and Jacobi divergence guard:
@@ -135,6 +176,7 @@ Core Linear Algebra & Numerical Engine:
       • Statistical dispersion profiling (Variance σ² and Standard Deviation σ).
       • Running Variance vs. Std Dev Crossover detection (σ = σ² sign changes).
       • 3D convergence trajectory tracking.
+      • Validation Curve: L2 Error Norm ||x_k - x_true|| with semi-logarithmic decay curve.
   - Solvability & Consistency Analysis:
       • Full rank testing via Rouché–Capelli theorem.
       • Determinant singularity checks.
@@ -153,7 +195,7 @@ AI Integration:
 Frontend & UI Analytics:
   - Glassmorphic dark-mode dashboard with interactive matrix grid and live equation preview.
   - Interactive Chart.js visualizations for variable allocation, convergence trajectories,
-    and running statistical crossovers.
+    running statistical crossovers, and logarithmic validation error decay curves.
   - Dynamic step-by-step accordion timeline.
   - Zero-downtime offline browser execution engine (runs both Gaussian and Jacobi clientside).
   - Zero-downtime client-side word problem preset matcher.
