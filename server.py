@@ -145,6 +145,14 @@ try:
             return FileResponse(index_file)
         return {"message": "MatSolve Backend is active. static/index.html not found."}
 
+    @app.get("/style.css")
+    async def serve_css():
+        return FileResponse(BASE_DIR / "static" / "style.css")
+
+    @app.get("/app.js")
+    async def serve_js():
+        return FileResponse(BASE_DIR / "static" / "app.js")
+
     if __name__ == "__main__":
         import uvicorn
         port = int(os.environ.get("PORT", 8000))
