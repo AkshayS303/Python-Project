@@ -13,6 +13,7 @@ const state = {
   chartInstance: null,
   jacobiTrajectoryChartInstance: null,
   jacobiCrossoverChartInstance: null,
+  lastJacobiResult: null,
   apiKey: localStorage.getItem('matsolve_gemini_api_key') || localStorage.getItem('matrixai_gemini_api_key') || ''
 };
 
@@ -110,6 +111,7 @@ const elements = {
 
   // Modal & Toast
   btnApiKey: document.getElementById('btn-api-key'),
+  btnTheme: document.getElementById('btn-theme-toggle'),
   apiKeyModal: document.getElementById('api-key-modal'),
   btnCloseModal: document.getElementById('btn-close-modal'),
   customApiKeyInput: document.getElementById('custom-api-key-input'),
@@ -120,10 +122,76 @@ const elements = {
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
+  applyTheme(getTheme(), { persist: false });
   setupEventListeners();
   renderMatrixGrid(state.matrixSize);
   loadMatrixPreset('unique3', true);
 });
+
+/* ==========================================================================
+   Theme controller — light (Ash) / dark (Nord)
+   The initial attribute is set by an inline script in index.html so the page
+   never flashes the wrong theme; this controller handles the toggle, the
+   accessible state, the browser chrome colour and chart re-theming.
+   ========================================================================== */
+const THEME_STORAGE_KEY = 'matsolve_theme';
+const THEME_META_COLORS = { light: '#CCDAD1', dark: '#2E3440' };
+
+function getTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+}
+
+function applyTheme(theme, options = {}) {
+  const dark = theme === 'dark';
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+
+  if (elements.btnTheme) {
+    const label = dark ? 'Switch to light mode' : 'Switch to dark mode';
+    elements.btnTheme.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    elements.btnTheme.setAttribute('aria-label', label);
+    elements.btnTheme.setAttribute('title', label);
+  }
+
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute('content', dark ? THEME_META_COLORS.dark : THEME_META_COLORS.light);
+  }
+
+  if (options.persist !== false) {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, dark ? 'dark' : 'light');
+    } catch (err) {
+      /* storage unavailable — the choice simply won't persist */
+    }
+  }
+
+  refreshChartsForTheme();
+}
+
+function toggleTheme() {
+  applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
+}
+
+// Read a CSS custom property so charts always match the active theme
+function themeValue(name, fallback) {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name);
+  return value && value.trim() ? value.trim() : fallback;
+}
+
+// Rebuild any visible chart with the new palette (data lives in the instances)
+function refreshChartsForTheme() {
+  if (typeof Chart === 'undefined') return;
+
+  if (state.chartInstance) {
+    const labels = state.chartInstance.data.labels;
+    const values = state.chartInstance.data.datasets[0].data;
+    renderChart(labels, values);
+  }
+
+  if (state.lastJacobiResult && (state.jacobiTrajectoryChartInstance || state.jacobiCrossoverChartInstance)) {
+    renderJacobiAnalytics(state.lastJacobiResult);
+  }
+}
 
 // Setup Events
 function setupEventListeners() {
@@ -194,6 +262,30 @@ function setupEventListeners() {
   // API Key Modal
   elements.btnApiKey.addEventListener('click', openApiModal);
   elements.btnCloseModal.addEventListener('click', closeApiModal);
+
+  // Theme toggle (light / Nord dark)
+  if (elements.btnTheme) {
+    elements.btnTheme.addEventListener('click', toggleTheme);
+  }
+
+  // Follow the OS preference only while the visitor has not picked a theme
+  const themeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  const onSystemThemeChange = (event) => {
+    let saved = null;
+    try {
+      saved = localStorage.getItem(THEME_STORAGE_KEY);
+    } catch (err) {
+      /* storage unavailable */
+    }
+    if (!saved) {
+      applyTheme(event.matches ? 'dark' : 'light', { persist: false });
+    }
+  };
+  if (typeof themeQuery.addEventListener === 'function') {
+    themeQuery.addEventListener('change', onSystemThemeChange);
+  } else if (typeof themeQuery.addListener === 'function') {
+    themeQuery.addListener(onSystemThemeChange);
+  }
 
   elements.apiKeyModal.addEventListener('click', (e) => {
     if (e.target === elements.apiKeyModal) {
@@ -1028,8 +1120,8 @@ function renderChart(labels, values) {
 
   const ctx = elements.chartCanvas.getContext('2d');
   const gradient = ctx.createLinearGradient(0, 0, 0, 228);
-  gradient.addColorStop(0, '#6F6866');
-  gradient.addColorStop(1, '#38302E');
+  gradient.addColorStop(0, themeValue('--chart-bar-1', '#6F6866'));
+  gradient.addColorStop(1, themeValue('--chart-bar-2', '#38302E'));
 
   elements.chartCanvas.setAttribute(
     'aria-label',
@@ -1045,8 +1137,8 @@ function renderChart(labels, values) {
           label: 'Resolved value',
           data: values,
           backgroundColor: gradient,
-          hoverBackgroundColor: '#9CAEA9',
-          borderColor: '#38302E',
+          hoverBackgroundColor: themeValue('--chart-hover', '#9CAEA9'),
+          borderColor: themeValue('--chart-border', '#38302E'),
           borderWidth: 3,
           borderRadius: 10,
           borderSkipped: false,
@@ -1060,9 +1152,9 @@ function renderChart(labels, values) {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#38302E',
-            titleColor: '#CCDAD1',
-            bodyColor: '#CCDAD1',
+            backgroundColor: themeValue('--chart-tooltip-bg', '#38302E'),
+            titleColor: themeValue('--chart-tooltip-text', '#CCDAD1'),
+            bodyColor: themeValue('--chart-tooltip-text', '#CCDAD1'),
             titleFont: { family: 'Space Grotesk', size: 12, weight: '700' },
             bodyFont: { family: 'JetBrains Mono', size: 12 },
             padding: 12,
@@ -1073,17 +1165,17 @@ function renderChart(labels, values) {
         scales: {
           x: {
             grid: { display: false },
-            border: { color: '#38302E', width: 2 },
+            border: { color: themeValue('--chart-axis', '#38302E'), width: 2 },
             ticks: {
-              color: '#38302E',
+              color: themeValue('--chart-axis', '#38302E'),
               font: { family: 'JetBrains Mono', size: 11, weight: '500' }
             }
           },
           y: {
-            grid: { color: 'rgba(56, 48, 46, 0.12)' },
-            border: { color: '#38302E', width: 2 },
+            grid: { color: themeValue('--chart-grid', 'rgba(56, 48, 46, 0.12)') },
+            border: { color: themeValue('--chart-axis', '#38302E'), width: 2 },
             ticks: {
-              color: '#6F6866',
+              color: themeValue('--chart-tick', '#6F6866'),
               font: { family: 'JetBrains Mono', size: 10 }
             },
             grace: '12%'
@@ -1186,6 +1278,7 @@ function showToast(msg) {
 // Render Jacobi Analytics Suite
 function renderJacobiAnalytics(res) {
   if (!elements.jacobiAnalyticsSection) return;
+  state.lastJacobiResult = res;
   elements.jacobiAnalyticsSection.classList.remove('hidden');
 
   const iters = res.iterations_completed || (res.history ? res.history.length - 1 : 0);
@@ -1271,7 +1364,14 @@ function renderJacobiTrajectoryChart(res) {
   const ctx = elements.jacobiTrajectoryChart.getContext('2d');
   const labels = res.history.map((_, idx) => idx === 0 ? 'k=0 (Initial)' : `k=${idx}`);
   const varLabels = res.variable_labels || [];
-  const palette = ['#38302E', '#6F6866', '#788585', '#9CAEA9', '#4B433F', '#B7C9C2'];
+  const palette = [
+    themeValue('--series-1', '#38302E'),
+    themeValue('--series-2', '#6F6866'),
+    themeValue('--series-3', '#788585'),
+    themeValue('--series-4', '#9CAEA9'),
+    themeValue('--series-5', '#4B433F'),
+    themeValue('--series-6', '#B7C9C2')
+  ];
 
   const numVars = res.history[0].length;
   const datasets = [];
@@ -1299,22 +1399,33 @@ function renderJacobiTrajectoryChart(res) {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
-          labels: { color: '#38302E', font: { family: 'JetBrains Mono', size: 11 } }
+          labels: {
+            color: themeValue('--chart-axis', '#38302E'),
+            font: { family: 'JetBrains Mono', size: 11 }
+          }
         },
         tooltip: {
-          backgroundColor: 'rgba(56, 48, 46, 0.95)',
+          backgroundColor: themeValue('--chart-tooltip-bg', '#38302E'),
+          titleColor: themeValue('--chart-tooltip-text', '#CCDAD1'),
+          bodyColor: themeValue('--chart-tooltip-text', '#CCDAD1'),
           titleFont: { family: 'Bricolage Grotesque' },
           bodyFont: { family: 'JetBrains Mono' }
         }
       },
       scales: {
         x: {
-          grid: { color: 'rgba(56, 48, 46, 0.12)' },
-          ticks: { color: '#6F6866', font: { family: 'Space Grotesk' } }
+          grid: { color: themeValue('--chart-grid', 'rgba(56, 48, 46, 0.12)') },
+          ticks: {
+            color: themeValue('--chart-tick', '#6F6866'),
+            font: { family: 'Space Grotesk' }
+          }
         },
         y: {
-          grid: { color: 'rgba(56, 48, 46, 0.12)' },
-          ticks: { color: '#6F6866', font: { family: 'JetBrains Mono' } }
+          grid: { color: themeValue('--chart-grid', 'rgba(56, 48, 46, 0.12)') },
+          ticks: {
+            color: themeValue('--chart-tick', '#6F6866'),
+            font: { family: 'JetBrains Mono' }
+          }
         }
       }
     }
@@ -1336,8 +1447,18 @@ function renderJacobiCrossoverChart(res) {
 
   const labels = steps.map(s => `Step ${s}`);
   const varLabels = res.variable_labels || [];
-  const stdColors = ['#38302E', '#6F6866', '#788585', '#4B433F'];
-  const varColors = ['#9CAEA9', '#B7C9C2', '#788585', '#6F6866'];
+  const stdColors = [
+    themeValue('--series-std-1', '#38302E'),
+    themeValue('--series-std-2', '#6F6866'),
+    themeValue('--series-std-3', '#788585'),
+    themeValue('--series-std-4', '#4B433F')
+  ];
+  const varColors = [
+    themeValue('--series-var-1', '#9CAEA9'),
+    themeValue('--series-var-2', '#B7C9C2'),
+    themeValue('--series-var-3', '#788585'),
+    themeValue('--series-var-4', '#6F6866')
+  ];
   const datasets = [];
 
   let totalCrossovers = 0;
@@ -1392,22 +1513,33 @@ function renderJacobiCrossoverChart(res) {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
-          labels: { color: '#38302E', font: { family: 'JetBrains Mono', size: 10 } }
+          labels: {
+            color: themeValue('--chart-axis', '#38302E'),
+            font: { family: 'JetBrains Mono', size: 10 }
+          }
         },
         tooltip: {
-          backgroundColor: 'rgba(56, 48, 46, 0.95)',
+          backgroundColor: themeValue('--chart-tooltip-bg', '#38302E'),
+          titleColor: themeValue('--chart-tooltip-text', '#CCDAD1'),
+          bodyColor: themeValue('--chart-tooltip-text', '#CCDAD1'),
           titleFont: { family: 'Bricolage Grotesque' },
           bodyFont: { family: 'JetBrains Mono' }
         }
       },
       scales: {
         x: {
-          grid: { color: 'rgba(56, 48, 46, 0.12)' },
-          ticks: { color: '#6F6866', font: { family: 'Space Grotesk' } }
+          grid: { color: themeValue('--chart-grid', 'rgba(56, 48, 46, 0.12)') },
+          ticks: {
+            color: themeValue('--chart-tick', '#6F6866'),
+            font: { family: 'Space Grotesk' }
+          }
         },
         y: {
-          grid: { color: 'rgba(56, 48, 46, 0.12)' },
-          ticks: { color: '#6F6866', font: { family: 'JetBrains Mono' } }
+          grid: { color: themeValue('--chart-grid', 'rgba(56, 48, 46, 0.12)') },
+          ticks: {
+            color: themeValue('--chart-tick', '#6F6866'),
+            font: { family: 'JetBrains Mono' }
+          }
         }
       }
     }
