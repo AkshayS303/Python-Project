@@ -14,6 +14,7 @@ const state = {
   jacobiTrajectoryChartInstance: null,
   jacobiCrossoverChartInstance: null,
   jacobiValidationChartInstance: null,
+  lastJacobiResult: null,
   apiKey: localStorage.getItem('matsolve_gemini_api_key') || localStorage.getItem('matrixai_gemini_api_key') || ''
 };
 
@@ -71,6 +72,7 @@ const elements = {
   solveSpinner: document.getElementById('solve-spinner'),
   
   // Results
+  resultsSection: document.getElementById('results-section'),
   emptyState: document.getElementById('empty-state-view'),
   resultsContent: document.getElementById('results-content-view'),
   statusBanner: document.getElementById('status-banner'),
@@ -88,10 +90,10 @@ const elements = {
   
   solvedVariablesGrid: document.getElementById('solved-variables-grid'),
   btnCopySolutions: document.getElementById('btn-copy-solutions'),
+  chartCard: document.getElementById('allocation-chart-card'),
   stepCount: document.getElementById('step-count'),
   stepsTimeline: document.getElementById('steps-timeline'),
   chartCanvas: document.getElementById('solutionChart'),
-  allocationChartCard: document.getElementById('allocation-chart-card'),
 
   // Jacobi Analytics Elements
   jacobiAnalyticsSection: document.getElementById('jacobi-analytics-section'),
@@ -113,6 +115,7 @@ const elements = {
 
   // Modal & Toast
   btnApiKey: document.getElementById('btn-api-key'),
+  btnTheme: document.getElementById('btn-theme-toggle'),
   apiKeyModal: document.getElementById('api-key-modal'),
   btnCloseModal: document.getElementById('btn-close-modal'),
   customApiKeyInput: document.getElementById('custom-api-key-input'),
@@ -123,16 +126,100 @@ const elements = {
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
+  applyTheme(getTheme(), { persist: false });
   setupEventListeners();
   renderMatrixGrid(state.matrixSize);
-  loadMatrixPreset('unique3');
+  loadMatrixPreset('unique3', true);
 });
+
+/* ==========================================================================
+   Theme controller — light (Ash) / dark (Nord)
+   The initial attribute is set by an inline script in index.html so the page
+   never flashes the wrong theme; this controller handles the toggle, the
+   accessible state, the browser chrome colour and chart re-theming.
+   ========================================================================== */
+const THEME_STORAGE_KEY = 'matsolve_theme';
+const THEME_META_COLORS = { light: '#CCDAD1', dark: '#2E3440' };
+
+function getTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+}
+
+function applyTheme(theme, options = {}) {
+  const dark = theme === 'dark';
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+
+  if (elements.btnTheme) {
+    const label = dark ? 'Switch to light mode' : 'Switch to dark mode';
+    elements.btnTheme.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    elements.btnTheme.setAttribute('aria-label', label);
+    elements.btnTheme.setAttribute('title', label);
+  }
+
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute('content', dark ? THEME_META_COLORS.dark : THEME_META_COLORS.light);
+  }
+
+  if (options.persist !== false) {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, dark ? 'dark' : 'light');
+    } catch (err) {
+      /* storage unavailable — the choice simply won't persist */
+    }
+  }
+
+  refreshChartsForTheme();
+}
+
+function toggleTheme() {
+  applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
+}
+
+// Read a CSS custom property so charts always match the active theme
+function themeValue(name, fallback) {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name);
+  return value && value.trim() ? value.trim() : fallback;
+}
+
+// Rebuild any visible chart with the new palette (data lives in the instances)
+function refreshChartsForTheme() {
+  if (typeof Chart === 'undefined') return;
+
+  if (state.chartInstance) {
+    const labels = state.chartInstance.data.labels;
+    const values = state.chartInstance.data.datasets[0].data;
+    renderChart(labels, values);
+  }
+
+  if (state.lastJacobiResult && (state.jacobiTrajectoryChartInstance || state.jacobiCrossoverChartInstance)) {
+    renderJacobiAnalytics(state.lastJacobiResult);
+  }
+}
 
 // Setup Events
 function setupEventListeners() {
   // Tabs
   elements.tabWordProblem.addEventListener('click', () => switchMode('word-problem'));
   elements.tabDirectMatrix.addEventListener('click', () => switchMode('direct-matrix'));
+
+  // Keyboard navigation for the mode tabs (WAI-ARIA tabs pattern)
+  const modeTabs = [elements.tabWordProblem, elements.tabDirectMatrix];
+  modeTabs.forEach((tab, index) => {
+    tab.addEventListener('keydown', (e) => {
+      let targetIndex = null;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') targetIndex = (index + 1) % modeTabs.length;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') targetIndex = (index - 1 + modeTabs.length) % modeTabs.length;
+      if (e.key === 'Home') targetIndex = 0;
+      if (e.key === 'End') targetIndex = modeTabs.length - 1;
+      if (targetIndex === null) return;
+
+      e.preventDefault();
+      const target = modeTabs[targetIndex];
+      target.focus();
+      switchMode(target === elements.tabWordProblem ? 'word-problem' : 'direct-matrix');
+    });
+  });
 
   // Word problem preset chips
   document.querySelectorAll('[data-preset]').forEach(chip => {
@@ -177,20 +264,40 @@ function setupEventListeners() {
   elements.btnCopySolutions.addEventListener('click', copySolutionsToClipboard);
 
   // API Key Modal
-  elements.btnApiKey.addEventListener('click', () => {
-    elements.customApiKeyInput.value = state.apiKey;
-    elements.apiKeyModal.classList.remove('hidden');
-  });
+  elements.btnApiKey.addEventListener('click', openApiModal);
+  elements.btnCloseModal.addEventListener('click', closeApiModal);
 
-  elements.btnCloseModal.addEventListener('click', () => {
-    elements.apiKeyModal.classList.add('hidden');
-  });
+  // Theme toggle (light / Nord dark)
+  if (elements.btnTheme) {
+    elements.btnTheme.addEventListener('click', toggleTheme);
+  }
+
+  // Follow the OS preference only while the visitor has not picked a theme
+  const themeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  const onSystemThemeChange = (event) => {
+    let saved = null;
+    try {
+      saved = localStorage.getItem(THEME_STORAGE_KEY);
+    } catch (err) {
+      /* storage unavailable */
+    }
+    if (!saved) {
+      applyTheme(event.matches ? 'dark' : 'light', { persist: false });
+    }
+  };
+  if (typeof themeQuery.addEventListener === 'function') {
+    themeQuery.addEventListener('change', onSystemThemeChange);
+  } else if (typeof themeQuery.addListener === 'function') {
+    themeQuery.addListener(onSystemThemeChange);
+  }
 
   elements.apiKeyModal.addEventListener('click', (e) => {
     if (e.target === elements.apiKeyModal) {
-      elements.apiKeyModal.classList.add('hidden');
+      closeApiModal();
     }
   });
+
+  document.addEventListener('keydown', handleModalKeydown);
 
   elements.btnSaveApiKey.addEventListener('click', () => {
     const key = elements.customApiKeyInput.value.trim();
@@ -204,7 +311,7 @@ function setupEventListeners() {
       localStorage.removeItem('matrixai_gemini_api_key');
       showToast('Reset to default backend key.');
     }
-    elements.apiKeyModal.classList.add('hidden');
+    closeApiModal();
   });
 
   elements.btnClearApiKey.addEventListener('click', () => {
@@ -213,8 +320,58 @@ function setupEventListeners() {
     localStorage.removeItem('matsolve_gemini_api_key');
     localStorage.removeItem('matrixai_gemini_api_key');
     showToast('Reset to default backend key.');
-    elements.apiKeyModal.classList.add('hidden');
+    closeApiModal();
   });
+}
+
+// Accessible modal helpers
+let lastFocusedElement = null;
+
+function openApiModal() {
+  const active = document.activeElement;
+  lastFocusedElement = (active && active !== document.body && typeof active.focus === 'function')
+    ? active
+    : elements.btnApiKey;
+  elements.customApiKeyInput.value = state.apiKey;
+  elements.apiKeyModal.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  window.setTimeout(() => elements.customApiKeyInput.focus(), 0);
+}
+
+function closeApiModal() {
+  if (elements.apiKeyModal.classList.contains('hidden')) return;
+  elements.apiKeyModal.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+  if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+    lastFocusedElement.focus();
+  }
+}
+
+function handleModalKeydown(e) {
+  if (elements.apiKeyModal.classList.contains('hidden')) return;
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeApiModal();
+    return;
+  }
+
+  if (e.key !== 'Tab') return;
+  const focusables = Array.from(
+    elements.apiKeyModal.querySelectorAll('button, input, a[href], select, textarea, [tabindex]:not([tabindex="-1"])')
+  ).filter(el => !el.disabled && el.offsetParent !== null);
+
+  if (focusables.length === 0) return;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
 }
 
 // Mode Switching
@@ -223,8 +380,10 @@ function switchMode(mode) {
   if (mode === 'word-problem') {
     elements.tabWordProblem.classList.add('active');
     elements.tabWordProblem.setAttribute('aria-selected', 'true');
+    elements.tabWordProblem.setAttribute('tabindex', '0');
     elements.tabDirectMatrix.classList.remove('active');
     elements.tabDirectMatrix.setAttribute('aria-selected', 'false');
+    elements.tabDirectMatrix.setAttribute('tabindex', '-1');
 
     elements.panelWordProblem.classList.add('active');
     elements.panelDirectMatrix.classList.remove('active');
@@ -240,8 +399,10 @@ function switchMode(mode) {
   } else {
     elements.tabDirectMatrix.classList.add('active');
     elements.tabDirectMatrix.setAttribute('aria-selected', 'true');
+    elements.tabDirectMatrix.setAttribute('tabindex', '0');
     elements.tabWordProblem.classList.remove('active');
     elements.tabWordProblem.setAttribute('aria-selected', 'false');
+    elements.tabWordProblem.setAttribute('tabindex', '-1');
 
     elements.panelDirectMatrix.classList.add('active');
     elements.panelWordProblem.classList.remove('active');
@@ -267,6 +428,7 @@ function renderMatrixGrid(n) {
       input.dataset.col = c;
       input.dataset.matrix = 'A';
       input.value = r === c ? 1 : 0;
+      input.setAttribute('aria-label', `Coefficient row ${r + 1}, column ${c + 1}`);
       input.addEventListener('input', updateLiveEquations);
       rowEl.appendChild(input);
     }
@@ -284,6 +446,7 @@ function renderMatrixGrid(n) {
     inputB.dataset.row = r;
     inputB.dataset.matrix = 'B';
     inputB.value = (r + 1) * 2;
+    inputB.setAttribute('aria-label', `Constant term for row ${r + 1}`);
     inputB.addEventListener('input', updateLiveEquations);
     rowEl.appendChild(inputB);
 
@@ -294,7 +457,7 @@ function renderMatrixGrid(n) {
 }
 
 // Load Matrix Preset
-function loadMatrixPreset(key) {
+function loadMatrixPreset(key, silent = false) {
   const preset = MATRIX_PRESETS[key];
   if (!preset) return;
 
@@ -319,7 +482,11 @@ function loadMatrixPreset(key) {
     if (elements.jacobiOptionsGroup) elements.jacobiOptionsGroup.classList.remove('hidden');
   }
 
-  showToast(`Loaded ${key} preset`);
+  if (!silent) {
+    showToast(key === 'jacobi_dominant'
+      ? 'Loaded diagonally dominant Jacobi preset'
+      : `Loaded ${key} preset`);
+  }
 }
 
 // Read Current Matrix Values from UI
@@ -845,29 +1012,44 @@ function renderResults(res) {
   elements.resultsContent.classList.remove('hidden');
 
   // Solvability Banner & Ranks
-  elements.statusTitle.textContent = res.status || 'Solved';
+  const statusText = res.status || 'Solved';
+  elements.statusTitle.textContent = statusText;
   elements.statusBanner.className = 'status-banner';
-  if (res.status && (res.status.includes('No Solution') || res.status.includes('Diverged') || res.status.includes('Failed to Converge') || res.is_diverged)) {
+  if (res.is_diverged || /No Solution|No Unique|Singular|Zero|Inapplicable|Error|Diverged|Failed to Converge/i.test(statusText)) {
     elements.statusBanner.classList.add('inconsistent');
-  } else if (res.status && res.status.includes('Infinite')) {
+  } else if (/Infinite/i.test(statusText)) {
     elements.statusBanner.classList.add('infinite');
   }
 
-  let explanationHtml = res.message || 
-    `System satisfies Rouché–Capelli theorem with full rank. Solution vector resolved uniquely.`;
-
-  if (res.is_diverged || (res.status && res.status.includes('Diverged'))) {
-    explanationHtml += `
-      <div style="margin-top: 12px;">
-        <button class="btn-primary" style="font-size: 0.82rem; padding: 6px 14px;" onclick="switchMethodToGaussian()">
-          <i class="fa-solid fa-arrow-rotate-left"></i> Switch to Gaussian Elimination & Solve
-        </button>
-      </div>
-    `;
-    showToast('⚠ Jacobi diverged on this system. Switch to Gaussian Elimination.');
+  const statusIcon = elements.statusBadge.querySelector('i');
+  if (statusIcon) {
+    if (/Infinite/i.test(statusText)) {
+      statusIcon.className = 'fa-solid fa-infinity';
+    } else if (/No Solution|No Unique|Singular|Zero|Inapplicable|Error|Diverged|Failed to Converge/i.test(statusText)) {
+      statusIcon.className = 'fa-solid fa-triangle-exclamation';
+    } else {
+      statusIcon.className = 'fa-solid fa-circle-check';
+    }
   }
 
-  elements.statusExplanation.innerHTML = explanationHtml;
+  elements.statusExplanation.textContent = res.message || 
+    `System satisfies Rouché–Capelli theorem with full rank. Solution vector resolved uniquely.`;
+
+  // Jacobi (or any iterative method) divergence: offer a one-click fallback.
+  if (res.is_diverged || (res.status && res.status.includes('Diverged'))) {
+    const actionRow = document.createElement('div');
+    actionRow.className = 'status-action';
+
+    const switchBtn = document.createElement('button');
+    switchBtn.type = 'button';
+    switchBtn.className = 'btn-tiny status-action-btn';
+    switchBtn.innerHTML = '<i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i> Switch to Gaussian elimination &amp; solve';
+    switchBtn.addEventListener('click', () => window.switchMethodToGaussian());
+    actionRow.appendChild(switchBtn);
+
+    elements.statusExplanation.appendChild(actionRow);
+    showToast('⚠ Jacobi diverged on this system. Switch to Gaussian elimination.');
+  }
 
   elements.pillRankA.textContent = `rank(A) = ${res.rank_A !== undefined ? res.rank_A : '-'}`;
   elements.pillRankAug.textContent = `rank([A|B]) = ${res.rank_augmented !== undefined ? res.rank_augmented : '-'}`;
@@ -903,6 +1085,9 @@ function renderResults(res) {
   const sol = res.solution || [];
 
   if (sol && sol.length > 0) {
+    elements.btnCopySolutions.classList.remove('hidden');
+    elements.chartCard.classList.remove('hidden');
+
     sol.forEach((val, idx) => {
       const card = document.createElement('div');
       card.className = 'var-card';
@@ -917,14 +1102,17 @@ function renderResults(res) {
     // Update Chart
     renderChart(labels.length ? labels : sol.map((_, i) => `x${i + 1}`), sol);
   } else {
+    elements.btnCopySolutions.classList.add('hidden');
+    elements.chartCard.classList.add('hidden');
     const isDiverged = res.is_diverged || (res.status && res.status.includes('Diverged'));
-    elements.solvedVariablesGrid.innerHTML = `
-      <div style="grid-column: 1 / -1; color: ${isDiverged ? '#fca5a5' : 'var(--text-dim)'}; background: ${isDiverged ? 'rgba(239, 68, 68, 0.08)' : 'transparent'}; border: ${isDiverged ? '1px solid rgba(239, 68, 68, 0.25)' : 'none'}; border-radius: 8px; font-size: 0.88rem; padding: 14px;">
-        <i class="fa-solid fa-triangle-exclamation"></i> ${isDiverged 
-          ? 'Jacobi method diverged because this system is not diagonally dominant (|A_ii| ≤ ∑|A_ij|). Please switch to Gaussian Elimination to view the exact solution.' 
-          : 'No unique solution vector to display (system is inconsistent or underdetermined).'}
-      </div>
-    `;
+    elements.solvedVariablesGrid.innerHTML = isDiverged
+      ? `<div class="no-solution-note no-solution-note-alert">
+          <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+          Jacobi method diverged because this system is not diagonally dominant (|A_ii| ≤ ∑|A_ij|). Please switch to Gaussian elimination to view the exact solution.
+        </div>`
+      : `<div class="no-solution-note">
+          No unique solution vector to display (system is inconsistent or underdetermined).
+        </div>`;
     if (state.chartInstance) {
       state.chartInstance.destroy();
       state.chartInstance = null;
@@ -952,55 +1140,105 @@ function renderResults(res) {
       state.jacobiValidationChartInstance = null;
     }
   }
+
+  scrollToResultsOnSmallScreens();
+}
+
+// Bring the freshly rendered solution into view on stacked (mobile) layouts
+function scrollToResultsOnSmallScreens() {
+  if (!elements.resultsSection) return;
+  if (!window.matchMedia('(max-width: 1080px)').matches) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  elements.resultsSection.scrollIntoView({
+    behavior: reduceMotion ? 'auto' : 'smooth',
+    block: 'start'
+  });
 }
 
 // Render Chart.js Distribution
 function renderChart(labels, values) {
   if (state.chartInstance) {
     state.chartInstance.destroy();
+    state.chartInstance = null;
+  }
+
+  // The visualization is optional: never let a missing CDN block the results.
+  if (typeof Chart === 'undefined') {
+    elements.chartCard.classList.add('hidden');
+    console.warn('Chart.js unavailable — hiding the value profile.');
+    return;
   }
 
   const ctx = elements.chartCanvas.getContext('2d');
-  const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-  gradient.addColorStop(0, 'rgba(99, 102, 241, 0.85)');
-  gradient.addColorStop(1, 'rgba(6, 182, 212, 0.2)');
+  const gradient = ctx.createLinearGradient(0, 0, 0, 228);
+  gradient.addColorStop(0, themeValue('--chart-bar-1', '#6F6866'));
+  gradient.addColorStop(1, themeValue('--chart-bar-2', '#38302E'));
 
-  state.chartInstance = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Resolved Value',
-        data: values,
-        backgroundColor: gradient,
-        borderColor: '#6366f1',
-        borderWidth: 1.5,
-        borderRadius: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: 'rgba(17, 24, 39, 0.9)',
-          titleFont: { family: 'Outfit' },
-          bodyFont: { family: 'Fira Code' }
-        }
+  elements.chartCanvas.setAttribute(
+    'aria-label',
+    `Bar chart of solved values. ${labels.map((label, i) => `${label} = ${values[i]}`).join(', ')}`
+  );
+
+  try {
+    state.chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Resolved value',
+          data: values,
+          backgroundColor: gradient,
+          hoverBackgroundColor: themeValue('--chart-hover', '#9CAEA9'),
+          borderColor: themeValue('--chart-border', '#38302E'),
+          borderWidth: 3,
+          borderRadius: 10,
+          borderSkipped: false,
+          maxBarThickness: 66
+        }]
       },
-      scales: {
-        x: {
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#9ca3af', font: { family: 'Inter' } }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: themeValue('--chart-tooltip-bg', '#38302E'),
+            titleColor: themeValue('--chart-tooltip-text', '#CCDAD1'),
+            bodyColor: themeValue('--chart-tooltip-text', '#CCDAD1'),
+            titleFont: { family: 'Space Grotesk', size: 12, weight: '700' },
+            bodyFont: { family: 'JetBrains Mono', size: 12 },
+            padding: 12,
+            cornerRadius: 10,
+            displayColors: false
+          }
         },
-        y: {
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#9ca3af', font: { family: 'Fira Code' } }
+        scales: {
+          x: {
+            grid: { display: false },
+            border: { color: themeValue('--chart-axis', '#38302E'), width: 2 },
+            ticks: {
+              color: themeValue('--chart-axis', '#38302E'),
+              font: { family: 'JetBrains Mono', size: 11, weight: '500' }
+            }
+          },
+          y: {
+            grid: { color: themeValue('--chart-grid', 'rgba(56, 48, 46, 0.12)') },
+            border: { color: themeValue('--chart-axis', '#38302E'), width: 2 },
+            ticks: {
+              color: themeValue('--chart-tick', '#6F6866'),
+              font: { family: 'JetBrains Mono', size: 10 }
+            },
+            grace: '12%'
+          }
         }
       }
-    }
-  });
+    });
+  } catch (err) {
+    console.warn('Chart rendering failed — hiding the value profile.', err);
+    elements.chartCard.classList.add('hidden');
+    state.chartInstance = null;
+  }
 }
 
 // Render Step-by-Step Accordion / Timeline
@@ -1009,29 +1247,38 @@ function renderSteps(steps) {
   elements.stepsTimeline.innerHTML = '';
 
   steps.forEach((step, idx) => {
-    const card = document.createElement('div');
+    const card = document.createElement('details');
     card.className = 'step-card';
+    if (idx === 0) card.open = true;
 
     let matrixHtml = '';
     if (step.matrix && Array.isArray(step.matrix)) {
+      const isAugmented = step.matrix.length > 0 && step.matrix[0].length === step.matrix.length + 1;
       const rowsHtml = step.matrix.map((row) => {
         const lastIdx = row.length - 1;
         const cellsHtml = row.map((val, cIdx) => {
-          const isB = cIdx === lastIdx;
+          const isB = isAugmented && cIdx === lastIdx;
           return `<td class="${isB ? 'b-col' : ''}">${typeof val === 'number' ? Number(val.toFixed(3)) : val}</td>`;
         }).join('');
         return `<tr>${cellsHtml}</tr>`;
       }).join('');
-      matrixHtml = `<table class="step-matrix-table">${rowsHtml}</table>`;
+      matrixHtml = `
+        <div class="step-matrix-scroll">
+          <table class="step-matrix-table" aria-label="Matrix state after operation ${idx + 1}">
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>`;
     }
 
     card.innerHTML = `
-      <div class="step-header">
+      <summary class="step-header">
         <span class="step-number-tag">Step ${idx + 1}</span>
         <span class="step-title">${step.title || 'Matrix Transformation'}</span>
+      </summary>
+      <div class="step-body">
+        <p class="step-desc">${step.description || ''}</p>
+        ${matrixHtml}
       </div>
-      <div class="step-desc">${step.description || ''}</div>
-      ${matrixHtml}
     `;
 
     elements.stepsTimeline.appendChild(card);
@@ -1059,10 +1306,12 @@ function copySolutionsToClipboard() {
 function setLoading(isLoading) {
   if (isLoading) {
     elements.btnSolve.disabled = true;
+    elements.btnSolve.setAttribute('aria-busy', 'true');
     elements.solveSpinner.classList.remove('hidden');
     elements.btnSolve.querySelector('span').textContent = 'Solving System...';
   } else {
     elements.btnSolve.disabled = false;
+    elements.btnSolve.setAttribute('aria-busy', 'false');
     elements.solveSpinner.classList.add('hidden');
     elements.btnSolve.querySelector('span').textContent = 'Calculate Solution';
   }
@@ -1080,6 +1329,7 @@ function showToast(msg) {
 // Render Jacobi Analytics Suite
 function renderJacobiAnalytics(res) {
   if (!elements.jacobiAnalyticsSection) return;
+  state.lastJacobiResult = res;
   elements.jacobiAnalyticsSection.classList.remove('hidden');
 
   const iters = res.iterations_completed || (res.history ? res.history.length - 1 : 0);
@@ -1168,7 +1418,14 @@ function renderJacobiTrajectoryChart(res) {
   const ctx = elements.jacobiTrajectoryChart.getContext('2d');
   const labels = res.history.map((_, idx) => idx === 0 ? 'k=0 (Initial)' : `k=${idx}`);
   const varLabels = res.variable_labels || [];
-  const palette = ['#FF4136', '#0074D9', '#2ECC40', '#f59e0b', '#8b5cf6', '#ec4899'];
+  const palette = [
+    themeValue('--series-1', '#38302E'),
+    themeValue('--series-2', '#6F6866'),
+    themeValue('--series-3', '#788585'),
+    themeValue('--series-4', '#9CAEA9'),
+    themeValue('--series-5', '#4B433F'),
+    themeValue('--series-6', '#B7C9C2')
+  ];
 
   const numVars = res.history[0].length;
   const datasets = [];
@@ -1196,22 +1453,33 @@ function renderJacobiTrajectoryChart(res) {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
-          labels: { color: '#e5e7eb', font: { family: 'Inter', size: 11 } }
+          labels: {
+            color: themeValue('--chart-axis', '#38302E'),
+            font: { family: 'JetBrains Mono', size: 11 }
+          }
         },
         tooltip: {
-          backgroundColor: 'rgba(17, 24, 39, 0.95)',
-          titleFont: { family: 'Outfit' },
-          bodyFont: { family: 'Fira Code' }
+          backgroundColor: themeValue('--chart-tooltip-bg', '#38302E'),
+          titleColor: themeValue('--chart-tooltip-text', '#CCDAD1'),
+          bodyColor: themeValue('--chart-tooltip-text', '#CCDAD1'),
+          titleFont: { family: 'Bricolage Grotesque' },
+          bodyFont: { family: 'JetBrains Mono' }
         }
       },
       scales: {
         x: {
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#9ca3af', font: { family: 'Inter' } }
+          grid: { color: themeValue('--chart-grid', 'rgba(56, 48, 46, 0.12)') },
+          ticks: {
+            color: themeValue('--chart-tick', '#6F6866'),
+            font: { family: 'Space Grotesk' }
+          }
         },
         y: {
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#9ca3af', font: { family: 'Fira Code' } }
+          grid: { color: themeValue('--chart-grid', 'rgba(56, 48, 46, 0.12)') },
+          ticks: {
+            color: themeValue('--chart-tick', '#6F6866'),
+            font: { family: 'JetBrains Mono' }
+          }
         }
       }
     }
@@ -1233,8 +1501,18 @@ function renderJacobiCrossoverChart(res) {
 
   const labels = steps.map(s => `Step ${s}`);
   const varLabels = res.variable_labels || [];
-  const stdColors = ["#FF4136", "#0074D9", "#2ECC40", "#ec4899"];
-  const varColors = ["#85144b", "#001f3f", "#3D9970", "#701a75"];
+  const stdColors = [
+    themeValue('--series-std-1', '#38302E'),
+    themeValue('--series-std-2', '#6F6866'),
+    themeValue('--series-std-3', '#788585'),
+    themeValue('--series-std-4', '#4B433F')
+  ];
+  const varColors = [
+    themeValue('--series-var-1', '#9CAEA9'),
+    themeValue('--series-var-2', '#B7C9C2'),
+    themeValue('--series-var-3', '#788585'),
+    themeValue('--series-var-4', '#6F6866')
+  ];
   const datasets = [];
 
   let totalCrossovers = 0;
@@ -1289,22 +1567,33 @@ function renderJacobiCrossoverChart(res) {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
-          labels: { color: '#e5e7eb', font: { family: 'Inter', size: 10 } }
+          labels: {
+            color: themeValue('--chart-axis', '#38302E'),
+            font: { family: 'JetBrains Mono', size: 10 }
+          }
         },
         tooltip: {
-          backgroundColor: 'rgba(17, 24, 39, 0.95)',
-          titleFont: { family: 'Outfit' },
-          bodyFont: { family: 'Fira Code' }
+          backgroundColor: themeValue('--chart-tooltip-bg', '#38302E'),
+          titleColor: themeValue('--chart-tooltip-text', '#CCDAD1'),
+          bodyColor: themeValue('--chart-tooltip-text', '#CCDAD1'),
+          titleFont: { family: 'Bricolage Grotesque' },
+          bodyFont: { family: 'JetBrains Mono' }
         }
       },
       scales: {
         x: {
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#9ca3af', font: { family: 'Inter' } }
+          grid: { color: themeValue('--chart-grid', 'rgba(56, 48, 46, 0.12)') },
+          ticks: {
+            color: themeValue('--chart-tick', '#6F6866'),
+            font: { family: 'Space Grotesk' }
+          }
         },
         y: {
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#9ca3af', font: { family: 'Fira Code' } }
+          grid: { color: themeValue('--chart-grid', 'rgba(56, 48, 46, 0.12)') },
+          ticks: {
+            color: themeValue('--chart-tick', '#6F6866'),
+            font: { family: 'JetBrains Mono' }
+          }
         }
       }
     }
@@ -1413,7 +1702,7 @@ function renderIterationHistoryTable(res) {
   elements.iterationTableHead.innerHTML = `<tr>${ths.join('')}</tr>`;
 
   const rowsHtml = res.history.map((row, k) => {
-    const tds = [`<td style="color: var(--accent-cyan); font-weight: 600;">k = ${k} ${k === 0 ? '(Initial Guess)' : ''}</td>`];
+    const tds = [`<td class="iteration-index-cell">k = ${k} ${k === 0 ? '(Initial Guess)' : ''}</td>`];
     row.forEach(val => {
       tds.push(`<td>${typeof val === 'number' ? Number(val.toFixed(4)) : val}</td>`);
     });
