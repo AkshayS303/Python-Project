@@ -16,8 +16,6 @@
         var saved = localStorage.getItem('matsolve_theme');
         if (saved === 'dark' || saved === 'light') {
           theme = saved;
-        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          theme = 'dark';
         }
       } catch (e) { /* private mode: fall back to light */ }
       document.documentElement.setAttribute('data-theme', theme);
@@ -36,7 +34,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to the solver</a>
@@ -612,6 +610,6 @@
   <div class="toast hidden" id="app-toast" role="status" aria-live="polite"></div>
 
   <!-- Scripts -->
-  <script src="app.js"></script>
+  <script src="/static/app.js"></script>
 </body>
 </html>

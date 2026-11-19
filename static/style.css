@@ -1,6 +1,6 @@
-﻿/* ==========================================================================
-   MatSolve â€” Riff-inspired visual system
-   Ash grey Â· dim grey (primary) Â· grey olive Â· deep mocha Â· thick ink outlines
+/* ==========================================================================
+   MatSolve — Riff-inspired visual system
+   Ash grey · dim grey (primary) · grey olive · deep mocha · thick ink outlines
    ========================================================================== */
 
 :root {
@@ -8,7 +8,7 @@
   --ash-light: #CCDAD1;   /* Ash Grey               */
   --ash: #9CAEA9;         /* Ash Grey               */
   --olive: #788585;       /* Grey Olive             */
-  --dim: #6F6866;         /* Dim Grey â€” PRIMARY     */
+  --dim: #6F6866;         /* Dim Grey — PRIMARY     */
   --mocha: #38302E;       /* Deep Mocha             */
 
   /* Tints derived from the palette (surfaces only, never text) */
@@ -22,16 +22,16 @@
   --paper-deep: #B7C9C2;
   --white: #FFFFFF;
 
-  /* Primary accent â€” Dim Grey */
+  /* Primary accent — Dim Grey */
   --accent: var(--dim);
   --accent-deep: var(--mocha);
   --accent-wash: #D7E3DE;
 
-  /* Secondary accent â€” Ash Grey */
+  /* Secondary accent — Ash Grey */
   --accent-2: var(--ash);
   --accent-2-wash: var(--ash-wash);
 
-  /* Tertiary accent â€” Grey Olive (decorative / non-text use) */
+  /* Tertiary accent — Grey Olive (decorative / non-text use) */
   --accent-3: var(--olive);
   --accent-3-wash: #DCE5E1;
 
@@ -1759,7 +1759,7 @@ a {
 }
 
 .equations-explanation-list li::before {
-  content: "â†’";
+  content: "→";
   position: absolute;
   left: 0;
   font-weight: 700;
@@ -1957,7 +1957,7 @@ a {
 }
 
 .step-card[open] .step-header::after {
-  content: "âˆ’";
+  content: "−";
   background: var(--accent-2);
 }
 
@@ -2436,7 +2436,7 @@ body.modal-open {
 }
 
 .toast::before {
-  content: "âœ¦ ";
+  content: "✦ ";
   color: var(--accent-2);
 }
 
@@ -2948,7 +2948,7 @@ body.modal-open {
   color: var(--muted);
 }
 
-/* Ïƒ = ÏƒÂ² crossover badges */
+/* σ = σ² crossover badges */
 .crossover-badges {
   display: flex;
   flex-wrap: wrap;

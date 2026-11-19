@@ -138,20 +138,24 @@ try:
     if static_dir.exists():
         app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
+    # Always ship the freshest UI files so a stale cache never shows an
+    # unstyled page (HTML/CSS/JS can change independently of the server code).
+    NO_CACHE = {"Cache-Control": "no-store, max-age=0"}
+
     @app.get("/")
     async def serve_index():
         index_file = BASE_DIR / "static" / "index.html"
         if index_file.exists():
-            return FileResponse(index_file)
+            return FileResponse(index_file, headers=NO_CACHE)
         return {"message": "MatSolve Backend is active. static/index.html not found."}
 
     @app.get("/style.css")
     async def serve_css():
-        return FileResponse(BASE_DIR / "static" / "style.css")
+        return FileResponse(BASE_DIR / "static" / "style.css", headers=NO_CACHE)
 
     @app.get("/app.js")
     async def serve_js():
-        return FileResponse(BASE_DIR / "static" / "app.js")
+        return FileResponse(BASE_DIR / "static" / "app.js", headers=NO_CACHE)
 
     if __name__ == "__main__":
         import uvicorn

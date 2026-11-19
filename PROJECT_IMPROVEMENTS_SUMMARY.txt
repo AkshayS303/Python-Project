@@ -5,6 +5,155 @@
 UPDATE LOG
 ================================================================================
 
+[2026-11-19] – Nord Dark Mode + Accessible Header Theme Toggle
+--------------------------------------------------------------------------------
+CHANGE: Added a full dark theme built on the Nord palette, switchable from a
+        new top-right control in the sticky header. The existing mocha/moss-
+        green light theme is unchanged and remains the default; no solver,
+        endpoint, preset, AI/offline path or JS interaction was altered.
+
+PALETTE (Nord):
+  - Polar Night surfaces:  paper #2E3440, paper-deep #272C36, cards #3B4252
+  - Snow Storm text:       ink #ECEFF4, secondary #C6D0DF, muted #AAB6C7
+  - Frost accents:         #88C0D0 (primary), #8FBCBB (accent text/icons),
+                           #4C566A (secondary fill), wash #434C5E
+  - Aurora highlights:     #B48EAD decorative, plus #EBCB8B / #A3BE8C /
+                           #D08770 / #BF616A for chart series only
+
+THEME SYSTEM (static/style.css):
+  - Dark mode is a single `:root[data-theme="dark"]` token override block, not a
+    duplicated stylesheet: every component already consumes role tokens, so it
+    adapts automatically. `color-scheme` switches to dark for native controls.
+  - Added semantic tokens to remove token double-duty:
+      --on-accent / --on-accent-rgb   text on accent fills (light: white,
+                                      dark: Polar Night)
+      --on-ink                        text on ink fills (inverse per theme)
+      --ink-rgb / --paper-rgb         channel triplets so rgba() follows theme
+      --surface-hover                 input/card hover + open step surface
+      --backdrop                      modal scrim
+      --pill-alpha                    translucent pill opacity
+      --shadow-color                  offset shadow colour
+  - Offset shadows now use --shadow-color rather than --ink. In dark mode --ink
+    becomes light (correct for 3px outlines) but a light shadow would glow, so
+    shadows use a dedicated near-black (#171B22). The "ink slab" surfaces keep
+    readable contrast by inverting text through --on-ink.
+  - Chart colours moved from JS literals into CSS tokens (--chart-*, --series-*,
+    --series-std-*, --series-var-*) and are read at runtime with themeValue(),
+    so charts follow the active theme without a second palette in app.js.
+  - Targeted dark overrides only where a light surface was assumed:
+    .app-header translucency, .rank-pill chrome, ticket pills, the Gemini-key
+    chip (Frost fill with dark glyph), .method-tertiary, and .speech (explicit
+    --ink text so the bubble stays readable on the dark hero card).
+
+THEME TOGGLE (static/index.html + static/app.js):
+  - 42px circular button at the header's top right (38px <=480px), moon icon in
+    light, sun icon in dark; icon swap is CSS-only.
+  - Accessible: type="button", aria-pressed, aria-label/title updated to
+    "Switch to dark mode" / "Switch to light mode", visible focus ring.
+  - Persists the explicit choice in localStorage["matsolve_theme"]. With no
+    stored choice the app starts in the designed mocha/moss light theme; the OS
+    prefers-color-scheme is deliberately not auto-applied, so a machine set to
+    dark mode cannot surprise a lecturer during a demo.
+  - A tiny inline script in <head> sets data-theme before first paint (no flash
+    of the wrong theme); <html data-theme="light"> is the safe fallback.
+  - applyTheme() also updates <meta name="theme-color"> (#CCDAD1 / #2E3440) and
+    rebuilds any visible Chart.js chart with the new palette; the Jacobi suite
+    re-renders from state.lastJacobiResult.
+  - Theme choice is per browser (localStorage) and never touches FastAPI state.
+
+ARTWORK:
+  - All five inline SVG illustrations now use stroke="currentColor" /
+    fill="currentColor" with .art-block-1..4, .art-plaque-bg and
+    .art-plaque-ink hooks. In dark mode the ink turns Snow Storm, so line art,
+    brackets and the "x = ?" plaque stay crisp. The primary hero card keeps a
+    light Frost surface, so its local ink is pinned to Polar Night.
+
+ALSO FIXED: style.css contained double-encoded UTF-8 left by an older
+  PowerShell rewrite. Repaired the three visible pseudo-element glyphs to real
+  Unicode (→ in the AI equation list, − on an open step card, ✦ in the toast)
+  and cleaned the corrupted comment characters. File is now plain UTF-8 with no
+  BOM; all CSS remains byte-clean UTF-8.
+
+VERIFICATION:
+  - node --check static/app.js passes; CSS braces balanced 417/417.
+  - Light theme re-captured after the token refactor: every component keeps its
+    intended mocha/moss styling (green accent, ink outlines, offset shadows).
+  - Direct matrix solve returns 2, 3, -1 under gaussian, gauss_jordan, cramer,
+    inversion; the Jacobi-dominant preset converges; inconsistent/infinite/
+    identity states still render correctly.
+  - Toggle: light -> dark updates every surface immediately, aria-pressed/aria-
+    label/theme-color update, localStorage persists "dark" across reload with
+    no flash, and the dark choice survives a second navigation.
+  - Mobile 390x844: header (brand + key + guide + theme) fits at 390/390 with no
+    horizontal overflow; modal, AI card, step cards and charts are readable.
+  - No browser console errors during the full light/dark run.
+
+MAINTENANCE NOTE: style new UI with the semantic tokens (--on-accent, --on-ink,
+  --surface-hover, --shadow-color, --chart-*) instead of literal colours, and
+  read chart colours through themeValue(). That keeps one dark block sufficient
+  for future components.
+
+[2026-11-19] – Theme: mocha stays the default; green-accent experiment reverted
+--------------------------------------------------------------------------------
+CONTEXT: A "missing green accent" report prompted a green accent to be added to
+         the light theme. It was later traced to a display/dimness issue on one
+         device, not a code regression: every commit on main/origin plus all
+         unreachable git objects were checked and none of them ever contained a
+         green --accent, and the mocha palette renders correctly on the other
+         machines. The green experiment was therefore rolled back.
+
+REVERTED (static/style.css) — file is now identical to HEAD apart from the
+UTF-8/mojibake + line-ending cleanup done earlier in this session:
+  - Removed the added tokens `--green`, `--green-deep`, `--green-wash`.
+  - `--accent`, `--accent-deep`, `--accent-wash` back to
+    `var(--dim)`, `var(--mocha)` and `#D7E3DE` (dim grey primary).
+  - `--chart-bar-1` back to #6F6866, `--series-1` back to #38302E, and
+    `--art-1` back to #6F6866 so charts and hero artwork keep the monochrome
+    mocha look.
+  - Header comment restored to "Ash grey · dim grey (primary) · ...".
+  - Verified: zero remaining "green" references in style.css.
+
+KEPT (deliberate, matches the theme system entry above):
+  - mocha is the startup theme regardless of the OS dark-mode setting; Nord
+    dark is only used when the visitor picks it with the header toggle.
+    (`prefers-color-scheme` auto-switch removed from index.html + app.js.)
+
+[2026-11-19] – Fix: Unstyled/Blank UI Caused by Stale Server + Relative Asset Paths
+--------------------------------------------------------------------------------
+BUG: The page rendered as an unstyled document (giant blue logo artwork filling
+     the screen) in Edge, Chrome and the VS Code browser, while other machines
+     looked normal. /style.css and /app.js returned HTTP 404 while / and
+     /static/style.css returned 200.
+
+ROOT CAUSE:
+  - index.html (rewritten in the "ui" work) references its assets with the
+    short relative paths `style.css` and `app.js`, which resolve to /style.css
+    and /app.js on the server root.
+  - Those extra routes were added to server.py at the same time, but the
+    long-running uvicorn process on port 8000 had been started before the edit
+    and never reloaded. It kept serving the NEW index.html from disk (served
+    per-request) while the OLD route table had no /style.css and /app.js.
+  - Result: HTML 200 + CSS/JS 404 -> fully unstyled page (SVG logo expands to
+    full width and inherits the default link blue). Not a device/browser bug;
+    the "fine on other devices" machines were simply showing a cached copy of
+    the previous HTML that still pointed at /static/style.css.
+
+FIXES:
+  - static/index.html
+      - Assets now use server-absolute paths `/static/style.css` and
+        `/static/app.js`, which are served by the StaticFiles mount that exists
+        in every server version, so HTML and CSS can never be out of sync again.
+  - server.py
+      - Added `NO_CACHE = {"Cache-Control": "no-store, max-age=0"}` and applied
+        it to the `/`, `/style.css` and `/app.js` responses so an older cached
+        page stylesheet can never mask a fresh deploy.
+  - Operation: the stale uvicorn process was restarted; /, /style.css, /app.js
+    and /api/solve/matrix were all verified returning 200 with correct MIME
+    types and a correct solution vector.
+
+NOTE FOR DEMOS: after editing server.py always restart run.bat / server.py -
+uvicorn does not hot-reload every change, and HTML/CSS/JS edits are not watched.
+
 [2026-11-18] – Validation Curve: L2 Error Norm & Semi-Log Convergence Analytics
 --------------------------------------------------------------------------------
 CHANGE: Integrated teammate's latest algorithm update (from validation curve.pdf)

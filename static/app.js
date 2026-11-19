@@ -267,28 +267,11 @@ function setupEventListeners() {
   elements.btnApiKey.addEventListener('click', openApiModal);
   elements.btnCloseModal.addEventListener('click', closeApiModal);
 
-  // Theme toggle (light / Nord dark)
+  // Theme toggle (mocha light / Nord dark). The app always starts in the
+  // mocha theme unless the visitor has explicitly saved a preference, so the
+  // OS dark-mode setting never overrides the designed default.
   if (elements.btnTheme) {
     elements.btnTheme.addEventListener('click', toggleTheme);
-  }
-
-  // Follow the OS preference only while the visitor has not picked a theme
-  const themeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  const onSystemThemeChange = (event) => {
-    let saved = null;
-    try {
-      saved = localStorage.getItem(THEME_STORAGE_KEY);
-    } catch (err) {
-      /* storage unavailable */
-    }
-    if (!saved) {
-      applyTheme(event.matches ? 'dark' : 'light', { persist: false });
-    }
-  };
-  if (typeof themeQuery.addEventListener === 'function') {
-    themeQuery.addEventListener('change', onSystemThemeChange);
-  } else if (typeof themeQuery.addListener === 'function') {
-    themeQuery.addListener(onSystemThemeChange);
   }
 
   elements.apiKeyModal.addEventListener('click', (e) => {
