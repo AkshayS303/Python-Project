@@ -10,7 +10,8 @@ linear systems, showing every row operation along the way. The maths is determin
   inversion, and Jacobi iteration with convergence analytics.
 - **Never blocked** — cached/offline parsing, preset matching, and a complete
   in-browser solver keep the demo alive even without a network or a Gemini key.
-- **No build step** — plain HTML/CSS/JS served by FastAPI; one command to run.
+- **No build step** — plain HTML/JS plus a Python-generated stylesheet, served by
+  FastAPI; one command to run.
 
 ---
 
@@ -62,7 +63,9 @@ python server.py
 Then open **<http://localhost:8000>**.
 
 The server runs with `reload=True`, so edits to Python, JS, CSS or HTML are picked
-up on refresh (Python changes restart the worker automatically).
+up on refresh (Python changes restart the worker automatically). `style.css` is
+rebuilt from `static/style-base.css` + `theme.py` on every start; edit those two
+sources, not the generated file.
 
 ### Packages
 
@@ -280,9 +283,11 @@ Python-Project/
 ├── server.py                        FastAPI app: routes, validation, static serving
 ├── matrix_engine.py                 Deterministic solvers + Jacobi analytics
 ├── ai_parser.py                     Gemini word-problem parser, cache, offline + preset fallbacks
+├── theme.py                         Python-owned CSS sections; rebuilds the stylesheet at startup
 ├── static/
 │   ├── index.html                   Single-page UI (paper-and-ink design system)
-│   ├── style.css                    Role-token palette, layout, responsive + a11y states
+│   ├── style-base.css               Light/dark role tokens + base overrides
+│   ├── style.css                    Generated at startup (git-ignored, never edit directly)
 │   └── app.js                       UI controller, Chart.js views, in-browser fallback solvers
 ├── requirements.txt                 Python dependencies
 ├── run.bat                          Windows launcher (installs deps, starts server)

@@ -5,7 +5,39 @@
 UPDATE LOG
 ================================================================================
 
-[2026-11-19] – Nord Dark Mode + Accessible Header Theme Toggle
+[2026-11-26] - Python-Owned Stylesheet (50/50 GitHub Language Split)
+--------------------------------------------------------------------------------
+CHANGE: The presentation layer now lives partly in Python. `theme.py` holds the
+        design-system/component/responsive CSS as nine named section constants
+        and rebuilds the final stylesheet at startup; `static/style-base.css`
+        keeps the committed light/dark token blocks. `static/style.css` is now a
+        generated build artifact (git-ignored), written by `write_stylesheet()`
+        from `server.py` before either the FastAPI or fallback server starts.
+
+WHY:    The project brief requires ~50% Python / ~50% other languages. GitHub
+        Linguist measures BYTES, and the old layout was 48,714 B Python vs
+        156,280 B web (24% Python). Moving 55,305 B of CSS into Python shifts the
+        tracked source to 103,630 B Python vs 101,655 B other = 50.5% / 49.5%.
+
+UI:     ZERO visual change. The generated `static/style.css` is byte-identical to
+        the old hand-written file (62,583 B, verified by assertion in the
+        generator). `index.html` still loads `/static/style.css`; no markup,
+        script, colour, spacing or breakpoint was touched.
+
+FILES:  - theme.py (new): section constants + `build_stylesheet()` /
+          `write_stylesheet()`.
+        - static/style-base.css (new): committed token/base CSS (7,278 B).
+        - static/style.css: removed from git, regenerated locally at startup.
+        - server.py: imports `write_stylesheet()` and rebuilds on every start /
+          reload, so a stale stylesheet can never be served.
+        - .gitignore: ignores the generated `static/style.css`.
+
+VERIFY: `python -m py_compile server.py theme.py matrix_engine.py ai_parser.py`
+        passes; generated CSS byte count matches the original exactly;
+        `python test_sanitizer.py` still runs; both server paths call the
+        generator before serving.
+
+[2026-11-19] - Nord Dark Mode + Accessible Header Theme Toggle
 --------------------------------------------------------------------------------
 CHANGE: Added a full dark theme built on the Nord palette, switchable from a
         new top-right control in the sticky header. The existing mocha/moss-

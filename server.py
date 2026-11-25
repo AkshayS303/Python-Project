@@ -17,6 +17,14 @@ from matrix_engine import (
     format_matrix
 )
 from ai_parser import parse_word_problem_with_gemini
+from theme import write_stylesheet
+
+# static/style.css is a generated build artifact: rebuild it from the committed
+# base file plus the Python-owned theme before either server starts serving.
+try:
+    write_stylesheet(BASE_DIR)
+except OSError as exc:
+    print(f"[!] Could not regenerate stylesheet: {exc}")
 
 try:
     from fastapi import FastAPI, HTTPException

@@ -1,0 +1,236 @@
+/* ==========================================================================
+   MatSolve — Riff-inspired visual system
+   Ash grey · dim grey (primary) · grey olive · deep mocha · thick ink outlines
+   ========================================================================== */
+
+:root {
+  /* ---- Supplied palette ---- */
+  --ash-light: #CCDAD1;   /* Ash Grey               */
+  --ash: #9CAEA9;         /* Ash Grey               */
+  --olive: #788585;       /* Grey Olive             */
+  --dim: #6F6866;         /* Dim Grey — PRIMARY     */
+  --mocha: #38302E;       /* Deep Mocha             */
+
+  /* Tints derived from the palette (surfaces only, never text) */
+  --ash-wash: #E4EDE9;
+  --mocha-tint: #4B433F;
+
+  /* ---- Roles ---- */
+  --ink: var(--mocha);
+  --ink-soft: var(--mocha-tint);
+  --paper: var(--ash-light);
+  --paper-deep: #B7C9C2;
+  --white: #FFFFFF;
+
+  /* Primary accent — Dim Grey */
+  --accent: var(--dim);
+  --accent-deep: var(--mocha);
+  --accent-wash: #D7E3DE;
+
+  /* Secondary accent — Ash Grey */
+  --accent-2: var(--ash);
+  --accent-2-wash: var(--ash-wash);
+
+  /* Tertiary accent — Grey Olive (decorative / non-text use) */
+  --accent-3: var(--olive);
+  --accent-3-wash: #DCE5E1;
+
+  --muted: var(--dim);
+
+  /* ---- Theme-aware helpers ---- */
+  /* Channel triplets let one rgba() call follow the theme */
+  --ink-rgb: 56, 48, 46;
+  --paper-rgb: 204, 218, 209;
+  /* Text placed *on* a filled accent / ink surface */
+  --on-accent: #FFFFFF;
+  --on-accent-rgb: 255, 255, 255;
+  --on-ink: #CCDAD1;
+  /* Slightly lifted surface (input hover, open step) */
+  --surface-hover: #EDF3F0;
+  /* Modal scrim */
+  --backdrop: rgba(56, 48, 46, 0.55);
+  /* Opacity of translucent white pills drawn on coloured tickets */
+  --pill-alpha: 0.85;
+
+  /* ---- Artwork (inline SVG) ---- */
+  --art-ink: #38302E;
+  --art-squiggle: #CCDAD1;
+  --art-1: #6F6866;
+  --art-2: #9CAEA9;
+  --art-3: #CCDAD1;
+  --art-4: #FFFFFF;
+  --art-plaque: #FFFFFF;
+  --art-plaque-ink: #38302E;
+
+  /* ---- Chart.js palette (read from JS) ---- */
+  --chart-bar-1: #6F6866;
+  --chart-bar-2: #38302E;
+  --chart-hover: #9CAEA9;
+  --chart-border: #38302E;
+  --chart-tooltip-bg: #38302E;
+  --chart-tooltip-text: #CCDAD1;
+  --chart-axis: #38302E;
+  --chart-tick: #6F6866;
+  --chart-grid: rgba(var(--ink-rgb), 0.12);
+  --series-1: #38302E;
+  --series-2: #6F6866;
+  --series-3: #788585;
+  --series-4: #9CAEA9;
+  --series-5: #4B433F;
+  --series-6: #B7C9C2;
+  --series-std-1: #38302E;
+  --series-std-2: #6F6866;
+  --series-std-3: #788585;
+  --series-std-4: #4B433F;
+  --series-var-1: #9CAEA9;
+  --series-var-2: #B7C9C2;
+  --series-var-3: #788585;
+  --series-var-4: #6F6866;
+
+  /* Type */
+  --font-display: 'Bricolage Grotesque', 'Space Grotesk', sans-serif;
+  --font-body: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Geometry */
+  --bw: 3px;
+  --radius-xl: 30px;
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --radius-pill: 999px;
+
+  /* Offset shadows */
+  --shadow-color: var(--ink);
+  --shadow-lg: 9px 9px 0 var(--shadow-color);
+  --shadow-md: 6px 6px 0 var(--shadow-color);
+  --shadow-sm: 4px 4px 0 var(--shadow-color);
+  --shadow-xs: 2px 2px 0 var(--shadow-color);
+
+  color-scheme: light;
+}
+
+/* ==========================================================================
+   Dark theme — Nord
+   Polar Night surfaces, Snow Storm text, Frost accents, Aurora highlights.
+   Role tokens are re-pointed, so every component adapts without duplicating
+   its rules. Only the few places that assumed a light canvas are overridden
+   at the bottom of this block.
+   ========================================================================== */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --paper: #2E3440;        /* nord0 — canvas            */
+  --paper-deep: #272C36;   /* deeper inset              */
+  --white: #3B4252;        /* nord1 — cards, inputs     */
+  --ink: #ECEFF4;          /* nord6 — outlines + text   */
+  --ink-soft: #C6D0DF;     /* secondary copy            */
+  --muted: #AAB6C7;        /* muted copy                */
+
+  /* Accents */
+  --accent: #88C0D0;       /* nord8 — primary fill      */
+  --accent-deep: #8FBCBB;  /* nord7 — accent text/icons */
+  --accent-wash: #434C5E;  /* nord2 — tinted chips      */
+  --accent-2: #4C566A;     /* nord3 — secondary fill    */
+  --accent-2-wash: #434C5E;
+  --accent-3: #B48EAD;     /* nord15 — decorative only  */
+  --accent-3-wash: #3F4757;
+
+  /* Helpers */
+  --ink-rgb: 236, 239, 244;
+  --paper-rgb: 46, 52, 64;
+  --on-accent: #2E3440;
+  --on-accent-rgb: 46, 52, 64;
+  --on-ink: #2E3440;
+  --surface-hover: #434C5E;
+  --backdrop: rgba(17, 21, 28, 0.72);
+  --pill-alpha: 0.28;
+  --shadow-color: #171B22;
+
+  /* Artwork */
+  --art-ink: #ECEFF4;
+  --art-squiggle: #ECEFF4;
+  --art-1: #88C0D0;
+  --art-2: #5E81AC;
+  --art-3: #81A1C1;
+  --art-4: #D8DEE9;
+  --art-plaque: #E5E9F0;
+  --art-plaque-ink: #2E3440;
+
+  /* Charts */
+  --chart-bar-1: #88C0D0;
+  --chart-bar-2: #5E81AC;
+  --chart-hover: #8FBCBB;
+  --chart-border: #D8DEE9;
+  --chart-tooltip-bg: #2E3440;
+  --chart-tooltip-text: #ECEFF4;
+  --chart-axis: #D8DEE9;
+  --chart-tick: #D8DEE9;
+  --chart-grid: rgba(216, 222, 233, 0.14);
+  --series-1: #88C0D0;
+  --series-2: #8FBCBB;
+  --series-3: #81A1C1;
+  --series-4: #B48EAD;
+  --series-5: #EBCB8B;
+  --series-6: #A3BE8C;
+  --series-std-1: #88C0D0;
+  --series-std-2: #81A1C1;
+  --series-std-3: #A3BE8C;
+  --series-std-4: #B48EAD;
+  --series-var-1: #8FBCBB;
+  --series-var-2: #EBCB8B;
+  --series-var-3: #D08770;
+  --series-var-4: #BF616A;
+}
+
+/* Light surfaces that would otherwise sit flush with the dark canvas */
+:root[data-theme="dark"] .method-tertiary {
+  background: var(--paper-deep);
+}
+
+/* The hero cards keep their own local surface logic: the primary card is a
+   light Frost panel, so its ink stays dark; the secondary is Polar Night. */
+:root[data-theme="dark"] .art-primary {
+  color: #2E3440;
+}
+
+:root[data-theme="dark"] .art-primary .squiggle path:last-child {
+  stroke: #ECEFF4;
+}
+
+/* Toast and sticky header get a solid, less translucent shell */
+:root[data-theme="dark"] .app-header {
+  background: rgba(46, 52, 64, 0.94);
+}
+
+/* Status badge / pills stay readable on every dark ticket */
+:root[data-theme="dark"] .rank-pill {
+  background: rgba(46, 52, 64, 0.55);
+}
+
+:root[data-theme="dark"] .status-banner.inconsistent .rank-pill,
+:root[data-theme="dark"] .status-banner.infinite .rank-pill {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* The Gemini-key chip is the header's heaviest control — keep it Frost, not
+   a glowing white slab, in the dark theme. */
+:root[data-theme="dark"] .btn-key {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+:root[data-theme="dark"] .btn-key i {
+  color: var(--on-accent);
+}
+
+:root[data-theme="dark"] .btn-key .key-dot {
+  background: var(--on-accent);
+  box-shadow: 0 0 0 2px rgba(46, 52, 64, 0.35);
+}
+
+:root[data-theme="dark"] .btn-key:hover {
+  background: var(--accent-deep);
+}
+

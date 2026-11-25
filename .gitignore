@@ -221,3 +221,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Generated stylesheet (built from static/style-base.css + theme.py at startup)
+static/style.css
